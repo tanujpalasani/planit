@@ -1,21 +1,26 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { useAppContext } from "../../context/AppContext";
+import { useAppContext } from "../../context/useAppContext";
 
 import TaskCard from "../../components/dashboard/task/TaskCard";
 import CreateTaskModal from "../../components/dashboard/task/CreateTaskModal";
 
 function Tasks() {
 
-  /* ---------------- Modal State ---------------- */
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-
-  const { tasks, addTask, updateTaskStatus, deleteTask } = useAppContext();
+  const [isModalOpen, setIsModalOpen] =
+    useState(false);
 
 
-  /* ---------------- Create Task from Context ---------------- */
+  const {
+    tasks,
+    projects,
+    addTask,
+    updateTaskStatus,
+    deleteTask
+  } = useAppContext();
+
+
+  /* ---------- Create Task ---------- */
 
   const handleCreateTask = (task) => {
 
@@ -24,16 +29,17 @@ function Tasks() {
   };
 
 
-  /* ---------------- Update Status from Context ---------------- */
+  /* ---------- Update Status ---------- */
 
-  const handleStatusChange = (taskId, newStatus) => {
+  const handleStatusChange =
+    (taskId, newStatus) => {
 
-    updateTaskStatus(taskId, newStatus);
+      updateTaskStatus(taskId, newStatus);
 
-  };
+    };
 
 
-  /* ---------------- Delete Task from Context ---------------- */
+  /* ---------- Delete Task ---------- */
 
   const handleDeleteTask = (taskId) => {
 
@@ -42,11 +48,28 @@ function Tasks() {
   };
 
 
+  /* ---------- Resolve Project Name ---------- */
+
+  const getProjectName = (projectId) => {
+
+    const project = projects.find(
+      (p) => p.id === projectId
+    );
+
+    return project
+      ? project.name
+      : "Unknown Project";
+
+  };
+
+
   return (
+
     <div className="space-y-8">
 
 
       {/* Header */}
+
       <div className="flex justify-between items-center">
 
         <div>
@@ -63,21 +86,17 @@ function Tasks() {
 
 
         {/* Create Task Button */}
+
         <button
           onClick={() =>
             setIsModalOpen(true)
           }
           className="
             flex items-center gap-2
-
             px-5 py-2.5
-
             bg-gradient-primary
-
             rounded-lg
-
             hover:scale-105
-
             transition
           "
         >
@@ -93,16 +112,15 @@ function Tasks() {
 
 
       {/* Task List */}
+
       <div className="space-y-4">
 
         {tasks.length === 0 && (
 
-          <div className="
-            text-center
-            text-textSecondary
-            py-10
-          ">
+          <div className="text-center text-textSecondary py-10">
+
             No tasks found.
+
           </div>
 
         )}
@@ -110,12 +128,24 @@ function Tasks() {
 
         {tasks.map(task => (
 
-          <TaskCard
-            key={task.id}
-            task={task}
-            onStatusChange={handleStatusChange}
-            onDelete={handleDeleteTask}
-          />
+          <div key={task.id}>
+
+            {/* Project Name Label */}
+
+            <div className="text-xs text-textSecondary mb-1">
+
+              {getProjectName(task.projectId)}
+
+            </div>
+
+
+            <TaskCard
+              task={task}
+              onStatusChange={handleStatusChange}
+              onDelete={handleDeleteTask}
+            />
+
+          </div>
 
         ))}
 
@@ -124,6 +154,7 @@ function Tasks() {
 
 
       {/* Modal */}
+
       <CreateTaskModal
         isOpen={isModalOpen}
         onClose={() =>
@@ -134,8 +165,10 @@ function Tasks() {
 
 
     </div>
+
   );
 
 }
 
 export default Tasks;
+

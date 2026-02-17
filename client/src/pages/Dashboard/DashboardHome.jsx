@@ -1,4 +1,4 @@
-import { useAppContext } from "../../context/AppContext";
+import { useAppContext } from "../../context/useAppContext";
 
 
 import {
@@ -11,7 +11,13 @@ import {
 import TaskCard from "../../components/dashboard/task/TaskCard";
 
 function DashboardHome() {
-  const { user, projects, tasks } = useAppContext();
+  const {
+    user,
+    projects,
+    tasks,
+    updateTaskStatus,
+    deleteTask
+  } = useAppContext();
 
   /* ---------------- Calculate Stats from Context ---------------- */
 
@@ -70,8 +76,8 @@ function DashboardHome() {
       <div>
 
         <h1 className="text-3xl font-bold">
-  Welcome back, {user.name} 👋
-</h1>
+          Welcome back, {user.name}
+        </h1>
 
 
         <p className="text-textSecondary">
@@ -194,8 +200,8 @@ function DashboardHome() {
             <TaskCard
               key={task.id}
               task={task}
-              onStatusChange={() => {}}
-              onDelete={() => {}}
+              onStatusChange={updateTaskStatus}
+              onDelete={deleteTask}
             />
 
           ))}
@@ -246,7 +252,12 @@ function DashboardHome() {
                 </span>
 
                 <span className="text-textSecondary text-sm">
-                  {project.tasks} tasks
+                  {
+                    tasks.filter(
+                      (task) =>
+                        task.projectId === project.id
+                    ).length
+                  } tasks
                 </span>
 
               </div>
@@ -266,3 +277,5 @@ function DashboardHome() {
 }
 
 export default DashboardHome;
+
+

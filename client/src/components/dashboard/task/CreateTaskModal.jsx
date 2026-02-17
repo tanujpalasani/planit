@@ -1,29 +1,19 @@
 import { useState } from "react";
 import { X, Plus } from "lucide-react";
-import { useAppContext } from "../../../context/AppContext";
+import { createPortal } from "react-dom";
+import { useAppContext } from "../../../context/useAppContext";
 
-function CreateTaskModal({
-  isOpen,
-  onClose,
-  onCreate
-}) {
+function CreateTaskModal({ isOpen, onClose, onCreate }) {
 
   const { teamMembers, projects } = useAppContext();
 
   const [title, setTitle] = useState("");
-
   const [priority, setPriority] = useState("Medium");
-
   const [status, setStatus] = useState("Todo");
-
   const [projectId, setProjectId] = useState("");
-
   const [assigneeId, setAssigneeId] = useState("");
-
   const [subtaskInput, setSubtaskInput] = useState("");
-
   const [subtasks, setSubtasks] = useState([]);
-
 
   if (!isOpen) return null;
 
@@ -34,7 +24,7 @@ function CreateTaskModal({
 
     if (!subtaskInput.trim()) return;
 
-    setSubtasks([...subtasks, subtaskInput]);
+    setSubtasks(prev => [...prev, subtaskInput.trim()]);
 
     setSubtaskInput("");
   };
@@ -44,8 +34,8 @@ function CreateTaskModal({
 
   const handleRemoveSubtask = (index) => {
 
-    setSubtasks(
-      subtasks.filter((_, i) => i !== index)
+    setSubtasks(prev =>
+      prev.filter((_, i) => i !== index)
     );
 
   };
@@ -57,21 +47,29 @@ function CreateTaskModal({
 
     e.preventDefault();
 
-    if (!title.trim() || !projectId) return;
+    if (!title.trim()) {
+      alert("Task title is required");
+      return;
+    }
+
+    if (!projectId) {
+      alert("Please select a project");
+      return;
+    }
 
     const newTask = {
 
-      id: Date.now(),
-
-      title,
+      title: title.trim(),
 
       status,
 
       priority,
 
-      projectId: projectId ? parseInt(projectId) : null,
+      projectId: Number(projectId),
 
-      assigneeId: assigneeId ? parseInt(assigneeId) : null,
+      assigneeId: assigneeId
+        ? Number(assigneeId)
+        : null,
 
       subtasks
 
@@ -79,13 +77,14 @@ function CreateTaskModal({
 
     onCreate(newTask);
 
-    /* Reset */
+    /* Reset form */
 
     setTitle("");
     setPriority("Medium");
     setStatus("Todo");
     setProjectId("");
     setAssigneeId("");
+    setSubtaskInput("");
     setSubtasks([]);
 
     onClose();
@@ -93,34 +92,13 @@ function CreateTaskModal({
   };
 
 
-  return (
-    <div
-      className="
-        fixed inset-0 z-50
+  const modalContent = (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
 
-        flex items-center justify-center
-
-        bg-black/50 backdrop-blur-sm
-      "
-    >
-
-      <div
-        className="
-          w-full max-w-md
-
-          bg-primary
-
-          border border-white/10
-
-          rounded-xl
-
-          p-6
-
-          shadow-2xl
-        "
-      >
+      <div className="w-full max-w-md bg-primary border border-white/10 rounded-xl p-6 shadow-2xl">
 
         {/* Header */}
+
         <div className="flex justify-between items-center mb-4">
 
           <h2 className="text-lg font-semibold">
@@ -134,286 +112,240 @@ function CreateTaskModal({
         </div>
 
 
-        {/* Form */}
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-4"
-        >
+        {/* If no projects exist */}
 
-          {/* Title */}
-          <div>
+        {projects.length === 0 ? (
 
-            <label className="text-sm text-textSecondary">
-              Task Title
-            </label>
+          <div className="text-center text-textSecondary py-6">
 
-            <input
-              value={title}
-              onChange={(e) =>
-                setTitle(e.target.value)
-              }
-              className="
-                w-full mt-1
-
-                bg-white/5
-                border border-white/10
-
-                rounded-lg
-
-                px-3 py-2
-
-                outline-none
-              "
-            />
+            Create a project first before adding tasks.
 
           </div>
 
+        ) : (
 
-          {/* Priority */}
-          <div>
-
-            <label className="text-sm text-textSecondary">
-              Priority
-            </label>
-
-            <select
-              value={priority}
-              onChange={(e) =>
-                setPriority(e.target.value)
-              }
-              className="
-                w-full mt-1
-
-                bg-white/5
-                border border-white/10
-
-                rounded-lg
-
-                px-3 py-2
-              "
-            >
-
-              <option>Low</option>
-              <option>Medium</option>
-              <option>High</option>
-
-            </select>
-
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
 
 
-          {/* Status */}
-          <div>
+            {/* Title */}
 
-            <label className="text-sm text-textSecondary">
-              Status
-            </label>
+            <div>
 
-            <select
-              value={status}
-              onChange={(e) =>
-                setStatus(e.target.value)
-              }
-              className="
-                w-full mt-1
-
-                bg-white/5
-                border border-white/10
-
-                rounded-lg
-
-                px-3 py-2
-              "
-            >
-
-              <option>Todo</option>
-              <option>In Progress</option>
-              <option>Completed</option>
-
-            </select>
-
-          </div>
-
-
-          {/* Project */}
-          <div>
-
-            <label className="text-sm text-textSecondary">
-              Project
-            </label>
-
-            <select
-              value={projectId}
-              onChange={(e) =>
-                setProjectId(e.target.value)
-              }
-              className="
-                w-full mt-1
-
-                bg-white/5
-                border border-white/10
-
-                rounded-lg
-
-                px-3 py-2
-              "
-            >
-              <option value="">Select project</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-
-          </div>
-
-
-          {/* Assignee */}
-          <div>
-
-            <label className="text-sm text-textSecondary">
-              Assignee
-            </label>
-
-            <select
-              value={assigneeId}
-              onChange={(e) =>
-                setAssigneeId(e.target.value)
-              }
-              className="
-                w-full mt-1
-
-                bg-white/5
-                border border-white/10
-
-                rounded-lg
-
-                px-3 py-2
-              "
-            >
-              <option value="">Select team member</option>
-              {teamMembers.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.name}
-                </option>
-              ))}
-            </select>
-
-          </div>
-
-
-          {/* Subtasks */}
-          <div>
-
-            <label className="text-sm text-textSecondary">
-              Subtasks
-            </label>
-
-            <div className="flex gap-2 mt-1">
+              <label className="text-sm text-textSecondary">
+                Task Title
+              </label>
 
               <input
-                value={subtaskInput}
+                value={title}
                 onChange={(e) =>
-                  setSubtaskInput(e.target.value)
+                  setTitle(e.target.value)
                 }
-                className="
-                  flex-1
-
-                  bg-white/5
-                  border border-white/10
-
-                  rounded-lg
-
-                  px-3 py-2
-                "
+                className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 outline-none"
               />
 
-              <button
-                type="button"
-                onClick={handleAddSubtask}
-                className="
-                  bg-gradient-primary
+            </div>
 
-                  px-3
 
-                  rounded-lg
-                "
+            {/* Priority */}
+
+            <div>
+
+              <label className="text-sm text-textSecondary">
+                Priority
+              </label>
+
+              <select
+                value={priority}
+                onChange={(e) =>
+                  setPriority(e.target.value)
+                }
+                className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2"
               >
-                <Plus size={16} />
-              </button>
+
+                <option>Low</option>
+                <option>Medium</option>
+                <option>High</option>
+
+              </select>
 
             </div>
 
 
-            {/* Subtask list */}
-            <div className="mt-2 space-y-1">
+            {/* Status */}
 
-              {subtasks.map((sub, index) => (
+            <div>
 
-                <div
-                  key={index}
-                  className="
-                    flex justify-between
+              <label className="text-sm text-textSecondary">
+                Status
+              </label>
 
-                    text-xs
+              <select
+                value={status}
+                onChange={(e) =>
+                  setStatus(e.target.value)
+                }
+                className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2"
+              >
 
-                    bg-white/5
+                <option>Todo</option>
+                <option>In Progress</option>
+                <option>Completed</option>
 
-                    px-2 py-1
+              </select>
 
-                    rounded
-                  "
-                >
+            </div>
 
-                  {sub}
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleRemoveSubtask(index)
-                    }
+            {/* Project */}
+
+            <div>
+
+              <label className="text-sm text-textSecondary">
+                Project
+              </label>
+
+              <select
+                value={projectId}
+                onChange={(e) =>
+                  setProjectId(e.target.value)
+                }
+                className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2"
+              >
+
+                <option value="">
+                  Select project
+                </option>
+
+                {projects.map(project => (
+
+                  <option
+                    key={project.id}
+                    value={project.id}
                   >
-                    <X size={12} />
-                  </button>
+                    {project.name}
+                  </option>
 
-                </div>
+                ))}
 
-              ))}
+              </select>
 
             </div>
 
-          </div>
+
+            {/* Assignee */}
+
+            <div>
+
+              <label className="text-sm text-textSecondary">
+                Assignee
+              </label>
+
+              <select
+                value={assigneeId}
+                onChange={(e) =>
+                  setAssigneeId(e.target.value)
+                }
+                className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2"
+              >
+
+                <option value="">
+                  Select team member
+                </option>
+
+                {teamMembers.map(member => (
+
+                  <option
+                    key={member.id}
+                    value={member.id}
+                  >
+                    {member.name}
+                  </option>
+
+                ))}
+
+              </select>
+
+            </div>
 
 
-          {/* Submit */}
-          <button
-            type="submit"
-            className="
-              w-full
+            {/* Subtasks */}
 
-              bg-gradient-primary
+            <div>
 
-              py-2
+              <label className="text-sm text-textSecondary">
+                Subtasks
+              </label>
 
-              rounded-lg
+              <div className="flex gap-2 mt-1">
 
-              font-medium
+                <input
+                  value={subtaskInput}
+                  onChange={(e) =>
+                    setSubtaskInput(e.target.value)
+                  }
+                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2"
+                />
 
-              hover:scale-[1.02]
+                <button
+                  type="button"
+                  onClick={handleAddSubtask}
+                  className="bg-gradient-primary px-3 rounded-lg"
+                >
+                  <Plus size={16} />
+                </button>
 
-              transition
-            "
-          >
-            Create Task
-          </button>
+              </div>
 
-        </form>
+
+              <div className="mt-2 space-y-1">
+
+                {subtasks.map((sub, index) => (
+
+                  <div
+                    key={index}
+                    className="flex justify-between text-xs bg-white/5 px-2 py-1 rounded"
+                  >
+
+                    {sub}
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleRemoveSubtask(index)
+                      }
+                    >
+                      <X size={12} />
+                    </button>
+
+                  </div>
+
+                ))}
+
+              </div>
+
+            </div>
+
+
+            {/* Submit */}
+
+            <button
+              type="submit"
+              className="w-full bg-gradient-primary py-2 rounded-lg font-medium hover:scale-[1.02] transition"
+            >
+              Create Task
+            </button>
+
+          </form>
+
+        )}
 
       </div>
 
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
 
 export default CreateTaskModal;
+

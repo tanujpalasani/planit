@@ -10,6 +10,8 @@ function SubtaskItem({
   return (
     <div
       className="
+        group
+
         flex items-center justify-between
 
         bg-white/5

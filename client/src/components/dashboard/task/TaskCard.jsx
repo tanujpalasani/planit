@@ -1,12 +1,15 @@
+import { useState } from "react";
 import {
   CheckCircle2,
   Circle,
   Trash2,
-  Flag
+  Flag,
+  Edit
 } from "lucide-react";
 
 import SubtaskItem from "./SubtaskItem";
-import { useAppContext } from "../../../context/AppContext";
+import EditTaskModal from "./EditTaskModal";
+import { useAppContext } from "../../../context/useAppContext";
 
 function TaskCard({
   task,
@@ -14,10 +17,18 @@ function TaskCard({
   onDelete
 }) {
 
-  const { teamMembers } = useAppContext();
+  const { teamMembers, updateTask } = useAppContext();
+
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   const assignee = teamMembers.find(
     (member) => member.id === task.assigneeId
+  );
+  const normalizedSubtasks = (task.subtasks || []).map(
+    (subtask) =>
+      typeof subtask === "string"
+        ? { title: subtask, completed: false }
+        : subtask
   );
 
   /* ---------------- Priority Colors ---------------- */
@@ -32,15 +43,29 @@ function TaskCard({
   /* ---------------- Toggle Subtask (future backend ready) ---------------- */
 
   const handleToggleSubtask = (index) => {
-    // Will connect to global state later
-    console.log("Toggle subtask:", index);
+    const updatedSubtasks = normalizedSubtasks.map(
+      (subtask, i) =>
+        i === index
+          ? {
+              ...subtask,
+              completed: !subtask.completed
+            }
+          : subtask
+    );
+
+    updateTask(task.id, { subtasks: updatedSubtasks });
   };
 
 
   /* ---------------- Delete Subtask (future ready) ---------------- */
 
   const handleDeleteSubtask = (index) => {
-    console.log("Delete subtask:", index);
+    const updatedSubtasks =
+      normalizedSubtasks.filter(
+        (_, i) => i !== index
+      );
+
+    updateTask(task.id, { subtasks: updatedSubtasks });
   };
 
 
@@ -167,6 +192,21 @@ function TaskCard({
             <Trash2 size={16} />
           </button>
 
+          {/* Edit */}
+          <button
+            onClick={() => setIsEditOpen(true)}
+            className="
+              opacity-0
+              group-hover:opacity-100
+
+              text-blue-400
+              hover:text-blue-300
+
+              transition
+            "
+          >
+            <Edit size={16} />
+          </button>
 
         </div>
 
@@ -207,19 +247,15 @@ function TaskCard({
 
 
       {/* Subtasks */}
-      {task.subtasks && task.subtasks.length > 0 && (
+      {normalizedSubtasks.length > 0 && (
 
         <div className="mt-4 space-y-2">
 
-          {task.subtasks.map((subtask, index) => (
+          {normalizedSubtasks.map((subtask, index) => (
 
             <SubtaskItem
               key={index}
-              subtask={
-                typeof subtask === "string"
-                  ? { title: subtask, completed: false }
-                  : subtask
-              }
+              subtask={subtask}
               index={index}
               onToggle={handleToggleSubtask}
               onDelete={handleDeleteSubtask}
@@ -231,6 +267,13 @@ function TaskCard({
 
       )}
 
+      {/* Edit Task Modal */}
+      {isEditOpen && (
+        <EditTaskModal
+          onClose={() => setIsEditOpen(false)}
+          task={task}
+        />
+      )}
 
     </div>
   );
@@ -238,3 +281,4 @@ function TaskCard({
 }
 
 export default TaskCard;
+

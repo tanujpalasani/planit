@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 
 function CreateProjectModal({ isOpen, onClose, onCreate }) {
   
@@ -34,7 +35,7 @@ function CreateProjectModal({ isOpen, onClose, onCreate }) {
   };
 
 
-  return (
+  const modalContent = (
     <div
       className="
         fixed inset-0 z-50
@@ -195,6 +196,8 @@ function CreateProjectModal({ isOpen, onClose, onCreate }) {
 
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
 
 export default CreateProjectModal;

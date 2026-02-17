@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
-import { useAppContext } from "../../../context/AppContext";
+import { createPortal } from "react-dom";
+import { useAppContext } from "../../../context/useAppContext";
 
 function AddMemberModal({ isOpen, onClose }) {
   const { addTeamMember } = useAppContext();
@@ -41,7 +42,7 @@ function AddMemberModal({ isOpen, onClose }) {
 
   const roleOptions = ["Developer", "Designer", "Manager", "QA", "Product Owner"];
 
-  return (
+  const modalContent = (
     <div className="
       fixed inset-0 z-50
       
@@ -232,6 +233,9 @@ function AddMemberModal({ isOpen, onClose }) {
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
 
 export default AddMemberModal;
+

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { useAppContext } from "../../context/AppContext";
+import { useAppContext } from "../../context/useAppContext";
 import TeamMemberCard from "../../components/dashboard/team/TeamMemberCard";
 import AddMemberModal from "../../components/dashboard/team/AddMemberModal";
 
@@ -111,3 +111,4 @@ function Team() {
 }
 
 export default Team;
+

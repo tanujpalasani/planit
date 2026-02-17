@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
 
-// IMPORTANT — updated path based on your structure
+// Updated path based on your structure
 import Sidebar from "../components/dashboard/layout/Sidebar.jsx";
 import Topbar from "../components/dashboard/layout/Topbar.jsx";
 

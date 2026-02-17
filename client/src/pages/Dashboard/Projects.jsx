@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useAppContext } from "../../context/AppContext";
+import { useAppContext } from "../../context/useAppContext";
 
 import ProjectCard from "../../components/dashboard/project/ProjectCard";
 import CreateProjectModal from "../../components/dashboard/project/CreateProjectModal";
@@ -120,3 +120,4 @@ function Projects() {
 }
 
 export default Projects;
+

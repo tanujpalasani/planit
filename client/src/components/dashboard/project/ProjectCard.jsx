@@ -1,15 +1,27 @@
-import { FolderKanban, Users, CheckCircle2 } from "lucide-react";
+import { FolderKanban, Users, CheckCircle2, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAppContext } from "../../../context/useAppContext";
 
 function ProjectCard({ project, onClick }) {
 
   const navigate = useNavigate();
+  const { deleteProject, tasks } = useAppContext();
+  const projectTaskCount = tasks.filter(
+    (task) => task.projectId === project.id
+  ).length;
 
   const handleOpenProject = () => {
     if (onClick) {
       onClick(project);
     } else {
       navigate(`/dashboard/projects/${project.id}`);
+    }
+  };
+
+  const handleDeleteProject = (event) => {
+    event.stopPropagation();
+    if (confirm("Delete this project? This will remove all tasks.")) {
+      deleteProject(project.id);
     }
   };
 
@@ -41,16 +53,14 @@ function ProjectCard({ project, onClick }) {
 
       {/* Gradient Glow Background */}
       <div
-        style={{
-          background: project.color ? `linear-gradient(to right, var(--tw-gradient-stops))` : 'transparent',
-        }}
-        className="
+        className={`
           absolute inset-0
           opacity-10 blur-xl
           rounded-xl
           group-hover:opacity-20
           transition-all
-        "
+          bg-gradient-to-r ${project.color || "from-transparent to-transparent"}
+        `}
       />
 
 
@@ -71,21 +81,44 @@ function ProjectCard({ project, onClick }) {
           </div>
 
 
-          {/* Status */}
-          <span
-            className="
-              text-xs
-              px-2 py-1
-              rounded-md
+          <div className="flex items-center gap-2">
 
-              bg-white/10
-              border border-white/10
+            {/* Status */}
+            <span
+              className="
+                text-xs
+                px-2 py-1
+                rounded-md
 
-              text-textSecondary
-            "
-          >
-            {project.status}
-          </span>
+                bg-white/10
+                border border-white/10
+
+                text-textSecondary
+              "
+            >
+              {project.status}
+            </span>
+
+            {/* Delete */}
+            <button
+              onClick={handleDeleteProject}
+              className="
+                text-red-400
+                hover:text-red-300
+
+                opacity-0
+                group-hover:opacity-100
+
+                focus-visible:opacity-100
+
+                transition
+              "
+              aria-label="Delete project"
+            >
+              <Trash2 size={16} />
+            </button>
+
+          </div>
 
         </div>
 
@@ -114,7 +147,7 @@ function ProjectCard({ project, onClick }) {
 
           <div className="flex items-center gap-2">
             <CheckCircle2 size={16} />
-            {project.tasks || project.tasksCount || 0} Tasks
+            {projectTaskCount} Tasks
           </div>
 
           <div className="flex items-center gap-2">
@@ -132,3 +165,4 @@ function ProjectCard({ project, onClick }) {
 }
 
 export default ProjectCard;
+
