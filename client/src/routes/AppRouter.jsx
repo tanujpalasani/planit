@@ -10,15 +10,9 @@ import DashboardLayout from "../layouts/DashboardLayout";
 
 /* Dashboard Pages */
 import DashboardHome from "../pages/Dashboard/DashboardHome";
-
-/* Future pages (we'll create later) */
- import Projects from "../pages/Dashboard/Projects";
-// import Tasks from "../pages/Dashboard/Tasks";
-// import Profile from "../pages/Dashboard/Profile";
+import Projects from "../pages/Dashboard/Projects";
 import Tasks from "../pages/Dashboard/Tasks";
 import Profile from "../pages/Dashboard/Profile";
-
-
 import ProjectDetails from "../pages/Dashboard/ProjectDetails";
 
 

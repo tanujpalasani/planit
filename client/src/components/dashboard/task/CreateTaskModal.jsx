@@ -1,66 +1,138 @@
-import { X } from "lucide-react";
 import { useState } from "react";
+import { X, Plus } from "lucide-react";
 
-function CreateTaskModal({ isOpen, onClose, onCreate }) {
+function CreateTaskModal({
+  isOpen,
+  onClose,
+  onCreate
+}) {
 
-  const [formData, setFormData] = useState({
-    title: "",
-    status: "Todo"
-  });
+  const [title, setTitle] = useState("");
+
+  const [priority, setPriority] = useState("Medium");
+
+  const [status, setStatus] = useState("Todo");
+
+  const [assignee, setAssignee] = useState("");
+
+  const [subtaskInput, setSubtaskInput] = useState("");
+
+  const [subtasks, setSubtasks] = useState([]);
+
 
   if (!isOpen) return null;
 
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+  /* ---------- Add Subtask ---------- */
+
+  const handleAddSubtask = () => {
+
+    if (!subtaskInput.trim()) return;
+
+    setSubtasks([...subtasks, subtaskInput]);
+
+    setSubtaskInput("");
   };
 
 
+  /* ---------- Remove Subtask ---------- */
+
+  const handleRemoveSubtask = (index) => {
+
+    setSubtasks(
+      subtasks.filter((_, i) => i !== index)
+    );
+
+  };
+
+
+  /* ---------- Create Task ---------- */
+
   const handleSubmit = (e) => {
+
     e.preventDefault();
 
-    onCreate(formData);
+    if (!title.trim()) return;
 
-    setFormData({
-      title: "",
-      status: "Todo"
-    });
+    const newTask = {
+
+      id: Date.now(),
+
+      title,
+
+      status,
+
+      priority,
+
+      assignees: assignee
+        ? [assignee]
+        : [],
+
+      subtasks
+
+    };
+
+    onCreate(newTask);
+
+    /* Reset */
+
+    setTitle("");
+    setPriority("Medium");
+    setStatus("Todo");
+    setAssignee("");
+    setSubtasks([]);
 
     onClose();
+
   };
 
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div
+      className="
+        fixed inset-0 z-50
 
-      <div className="
-        w-full max-w-md
-        bg-white/5
-        border border-white/10
-        backdrop-blur-xl
-        rounded-xl
-        p-6
-      ">
+        flex items-center justify-center
+
+        bg-black/50 backdrop-blur-sm
+      "
+    >
+
+      <div
+        className="
+          w-full max-w-md
+
+          bg-primary
+
+          border border-white/10
+
+          rounded-xl
+
+          p-6
+
+          shadow-2xl
+        "
+      >
 
         {/* Header */}
         <div className="flex justify-between items-center mb-4">
 
-          <h2 className="text-xl font-semibold">
+          <h2 className="text-lg font-semibold">
             Create Task
           </h2>
 
           <button onClick={onClose}>
-            <X size={20} />
+            <X size={18} />
           </button>
 
         </div>
 
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4"
+        >
 
           {/* Title */}
           <div>
@@ -70,18 +142,56 @@ function CreateTaskModal({ isOpen, onClose, onCreate }) {
             </label>
 
             <input
-              type="text"
-              name="title"
-              required
-              value={formData.title}
-              onChange={handleChange}
+              value={title}
+              onChange={(e) =>
+                setTitle(e.target.value)
+              }
               className="
-                w-full mt-1 px-3 py-2
+                w-full mt-1
+
                 bg-white/5
                 border border-white/10
+
                 rounded-lg
+
+                px-3 py-2
+
+                outline-none
               "
             />
+
+          </div>
+
+
+          {/* Priority */}
+          <div>
+
+            <label className="text-sm text-textSecondary">
+              Priority
+            </label>
+
+            <select
+              value={priority}
+              onChange={(e) =>
+                setPriority(e.target.value)
+              }
+              className="
+                w-full mt-1
+
+                bg-white/5
+                border border-white/10
+
+                rounded-lg
+
+                px-3 py-2
+              "
+            >
+
+              <option>Low</option>
+              <option>Medium</option>
+              <option>High</option>
+
+            </select>
 
           </div>
 
@@ -94,45 +204,163 @@ function CreateTaskModal({ isOpen, onClose, onCreate }) {
             </label>
 
             <select
-              name="status"
-              value={formData.status}
-              onChange={handleChange}
+              value={status}
+              onChange={(e) =>
+                setStatus(e.target.value)
+              }
               className="
-                w-full mt-1 px-3 py-2
+                w-full mt-1
+
                 bg-white/5
                 border border-white/10
+
                 rounded-lg
+
+                px-3 py-2
               "
             >
 
-              <option value="Todo">Todo</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Completed">Completed</option>
+              <option>Todo</option>
+              <option>In Progress</option>
+              <option>Completed</option>
 
             </select>
 
           </div>
 
 
-          {/* Buttons */}
-          <div className="flex justify-end gap-2">
+          {/* Assignee */}
+          <div>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 bg-white/5 rounded-lg"
-            >
-              Cancel
-            </button>
+            <label className="text-sm text-textSecondary">
+              Assignee
+            </label>
 
-            <button
-              type="submit"
-              className="px-4 py-2 bg-gradient-primary rounded-lg"
-            >
-              Create
-            </button>
+            <input
+              value={assignee}
+              onChange={(e) =>
+                setAssignee(e.target.value)
+              }
+              placeholder="Enter name"
+              className="
+                w-full mt-1
+
+                bg-white/5
+                border border-white/10
+
+                rounded-lg
+
+                px-3 py-2
+              "
+            />
 
           </div>
+
+
+          {/* Subtasks */}
+          <div>
+
+            <label className="text-sm text-textSecondary">
+              Subtasks
+            </label>
+
+            <div className="flex gap-2 mt-1">
+
+              <input
+                value={subtaskInput}
+                onChange={(e) =>
+                  setSubtaskInput(e.target.value)
+                }
+                className="
+                  flex-1
+
+                  bg-white/5
+                  border border-white/10
+
+                  rounded-lg
+
+                  px-3 py-2
+                "
+              />
+
+              <button
+                type="button"
+                onClick={handleAddSubtask}
+                className="
+                  bg-gradient-primary
+
+                  px-3
+
+                  rounded-lg
+                "
+              >
+                <Plus size={16} />
+              </button>
+
+            </div>
+
+
+            {/* Subtask list */}
+            <div className="mt-2 space-y-1">
+
+              {subtasks.map((sub, index) => (
+
+                <div
+                  key={index}
+                  className="
+                    flex justify-between
+
+                    text-xs
+
+                    bg-white/5
+
+                    px-2 py-1
+
+                    rounded
+                  "
+                >
+
+                  {sub}
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleRemoveSubtask(index)
+                    }
+                  >
+                    <X size={12} />
+                  </button>
+
+                </div>
+
+              ))}
+
+            </div>
+
+          </div>
+
+
+          {/* Submit */}
+          <button
+            type="submit"
+            className="
+              w-full
+
+              bg-gradient-primary
+
+              py-2
+
+              rounded-lg
+
+              font-medium
+
+              hover:scale-[1.02]
+
+              transition
+            "
+          >
+            Create Task
+          </button>
 
         </form>
 

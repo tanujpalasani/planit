@@ -1,175 +1,182 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
+import Logo from "../../../assets/logo/logo-light.svg";
+
 import {
   LayoutDashboard,
   FolderKanban,
   CheckSquare,
   User,
-  LogOut
+  LogOut,
 } from "lucide-react";
 
-import Logo from "/src/assets/logo/logo-light.svg";
-
 function Sidebar() {
+
+  const navigate = useNavigate();
 
   const navItems = [
     {
       name: "Dashboard",
+      path: "/dashboard",
       icon: LayoutDashboard,
-      path: "/dashboard"
+      end: true,
     },
     {
       name: "Projects",
+      path: "/dashboard/projects",
       icon: FolderKanban,
-      path: "/dashboard/projects"
     },
     {
       name: "Tasks",
+      path: "/dashboard/tasks",
       icon: CheckSquare,
-      path: "/dashboard/tasks"
     },
     {
       name: "Profile",
+      path: "/dashboard/profile",
       icon: User,
-      path: "/dashboard/profile"
-    }
+    },
   ];
+
+
+  const handleLogout = () => {
+
+    // future: clear auth token here
+
+    navigate("/login");
+  };
 
 
   return (
     <aside
       className="
-        fixed left-0 top-0
-        w-64 h-screen
+        fixed top-0 left-0
 
-        bg-gradient-to-b
-        from-secondary
-        via-secondary
-        to-primary
+        h-screen w-64
+
+        bg-primary/95
+        backdrop-blur-xl
 
         border-r border-white/10
 
         flex flex-col
-        justify-between
 
-        backdrop-blur-xl
+        z-40
       "
     >
 
-      {/* ===== Top Section ===== */}
-      <div>
-
-        {/* Logo */}
-        <div className="
+      {/* Logo */}
+      <div
+        className="
           h-16
+
           flex items-center
-          px-6
+
+          px-4
+
           border-b border-white/10
-        ">
+        "
+      >
 
-          <img
-            src={Logo}
-            alt="PlanIt Logo"
-            className="
-              w-36
-              scale-125
-              origin-left
-              object-contain
-            "
-          />
-
-        </div>
-
-
-        {/* Navigation */}
-        <nav className="p-3 space-y-1">
-
-          {navItems.map((item, index) => {
-
-            const Icon = item.icon;
-
-            return (
-              <NavLink
-                key={index}
-                to={item.path}
-                end={item.path === "/dashboard"}
-                className={({ isActive }) => `
-                  
-                  relative
-                  flex items-center gap-3
-
-                  px-4 py-3
-                  rounded-lg
-
-                  text-sm font-medium
-
-                  transition-all duration-300
-
-                  group
-
-                  ${
-                    isActive
-                      ? `
-                        bg-white/10
-                        text-white
-                        shadow-lg
-                      `
-                      : `
-                        text-textSecondary
-                        hover:text-white
-                        hover:bg-white/5
-                      `
-                  }
-                `}
-              >
-
-                {/* Active Indicator */}
-                <span
-                  className="
-                    absolute left-0 top-1/2 -translate-y-1/2
-                    h-6 w-1
-                    bg-gradient-primary
-                    rounded-r-full
-                    opacity-0
-                    group-[.active]:opacity-100
-                  "
-                />
-
-                {/* Icon */}
-                <Icon size={18} />
-
-                {/* Text */}
-                {item.name}
-
-              </NavLink>
-            );
-
-          })}
-
-        </nav>
+        <img
+          src={Logo}
+          alt="PlanIt Logo"
+          className="
+            w-44
+            object-contain
+          "
+        />
 
       </div>
 
 
 
-      {/* ===== Bottom Section ===== */}
-      <div className="p-3 border-t border-white/10">
+      {/* Navigation */}
+      <nav
+        className="
+          flex-1
+
+          px-3 py-4
+
+          space-y-1
+        "
+      >
+
+        {navItems.map((item) => {
+
+          const Icon = item.icon;
+
+          return (
+            <NavLink
+              key={item.name}
+              to={item.path}
+              end={item.end || false}
+              className={({ isActive }) =>
+                `
+                relative
+
+                flex items-center gap-3
+
+                px-3 py-2.5
+
+                rounded-lg
+
+                text-sm font-medium
+
+                transition-all duration-200
+
+                ${
+                  isActive
+                    ? "text-white bg-white/5 border-l-2 border-purple-500"
+                    : "text-textSecondary hover:text-white hover:bg-white/5"
+                }
+                `
+              }
+            >
+
+              <Icon size={18} />
+
+              {item.name}
+
+            </NavLink>
+          );
+
+        })}
+
+      </nav>
+
+
+
+      {/* Logout Section */}
+      <div
+        className="
+          px-3 py-4
+
+          border-t border-white/10
+        "
+      >
 
         <button
+          onClick={handleLogout}
           className="
             w-full
 
             flex items-center gap-3
 
-            px-4 py-3
+            px-3 py-2.5
+
             rounded-lg
 
+            text-sm font-medium
+
             text-textSecondary
-            hover:text-white
+
+            hover:text-red-400
             hover:bg-white/5
 
-            transition-all duration-300
+            transition-all duration-200
           "
         >
+
           <LogOut size={18} />
 
           Logout
@@ -180,7 +187,6 @@ function Sidebar() {
 
     </aside>
   );
-
 }
 
 export default Sidebar;

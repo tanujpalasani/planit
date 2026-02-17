@@ -1,41 +1,40 @@
-import Sidebar from "../components/dashboard/layout/Sidebar";
-import Topbar from "../components/dashboard/layout/Topbar";
 import { Outlet } from "react-router-dom";
 
+// IMPORTANT — updated path based on your structure
+import Sidebar from "../components/dashboard/layout/Sidebar.jsx";
+import Topbar from "../components/dashboard/layout/Topbar.jsx";
+
 function DashboardLayout() {
+
   return (
-    <div className="bg-primary text-white min-h-screen">
+    <div className="min-h-screen bg-primary text-white">
 
       {/* Sidebar */}
       <Sidebar />
 
-      {/* Main wrapper */}
-      <div className="
-        ml-64
-        min-h-screen
-        flex flex-col
-      ">
+      {/* Main area */}
+      <div className="ml-64 min-h-screen flex flex-col">
 
         {/* Topbar */}
         <Topbar />
 
-        {/* Main content */}
-        <main className="
-          flex-1
-          p-6
-          md:p-8
-          lg:p-10
+        {/* Page content */}
+        <main
+          className="
+            flex-1
+            p-6 md:p-8 lg:p-10
 
-          bg-gradient-to-br
-          from-primary
-          via-primary
-          to-secondary
+            bg-gradient-to-br
+            from-primary
+            via-primary
+            to-secondary
 
-          relative
-          overflow-x-hidden
-        ">
+            relative
+            overflow-x-hidden
+          "
+        >
 
-          {/* Background glow */}
+          {/* Glow background */}
           <div className="absolute inset-0 -z-10 overflow-hidden">
 
             <div className="
@@ -56,7 +55,7 @@ function DashboardLayout() {
 
           </div>
 
-          {/* THIS renders DashboardHome */}
+          {/* Route content renders here */}
           <Outlet />
 
         </main>
@@ -65,6 +64,7 @@ function DashboardLayout() {
 
     </div>
   );
+
 }
 
 export default DashboardLayout;

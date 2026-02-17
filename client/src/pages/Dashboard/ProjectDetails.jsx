@@ -1,77 +1,96 @@
 import { useParams } from "react-router-dom";
-import { Plus, CheckCircle2, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { Plus } from "lucide-react";
+
+import TaskCard from "../../components/dashboard/task/TaskCard";
 import CreateTaskModal from "../../components/dashboard/task/CreateTaskModal";
 
 function ProjectDetails() {
 
   const { projectId } = useParams();
 
+
+  /* ---------------- Modal State ---------------- */
+
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+
+  /* ---------------- Tasks State ---------------- */
 
   const [tasks, setTasks] = useState([
     {
       id: 1,
       title: "Design dashboard UI",
-      status: "In Progress"
+      status: "In Progress",
+      priority: "High",
+      assignees: ["Tanu"],
+      subtasks: [
+        "Create layout",
+        "Add components"
+      ]
     },
     {
       id: 2,
       title: "Setup authentication",
-      status: "Completed"
-    },
-    {
-      id: 3,
-      title: "Create API integration",
-      status: "Todo"
+      status: "Todo",
+      priority: "Medium",
+      assignees: ["Tanu"],
+      subtasks: [
+        "Login API",
+        "Signup API"
+      ]
     }
   ]);
 
 
-  // Create task
-  const handleCreateTask = (data) => {
+  /* ---------------- Create Task ---------------- */
 
-    const newTask = {
-      id: Date.now(),
-      title: data.title,
-      status: data.status
-    };
+  const handleCreateTask = (task) => {
 
-    setTasks([newTask, ...tasks]);
+    setTasks(prev => [task, ...prev]);
+
   };
 
 
-  // Change status
+  /* ---------------- Update Status ---------------- */
+
   const handleStatusChange = (taskId, newStatus) => {
 
-    const updatedTasks = tasks.map(task =>
-      task.id === taskId
-        ? { ...task, status: newStatus }
-        : task
+    setTasks(prev =>
+      prev.map(task =>
+        task.id === taskId
+          ? { ...task, status: newStatus }
+          : task
+      )
     );
 
-    setTasks(updatedTasks);
   };
 
 
-  // Delete task
+  /* ---------------- Delete Task ---------------- */
+
   const handleDeleteTask = (taskId) => {
 
-    const filteredTasks = tasks.filter(
-      task => task.id !== taskId
+    setTasks(prev =>
+      prev.filter(task =>
+        task.id !== taskId
+      )
     );
 
-    setTasks(filteredTasks);
   };
 
+
+  /* ---------------- UI ---------------- */
 
   return (
     <div className="space-y-8">
+
 
       {/* Header */}
       <div className="flex justify-between items-center">
 
         <div>
+
           <h1 className="text-3xl font-bold">
             Project Details
           </h1>
@@ -79,17 +98,26 @@ function ProjectDetails() {
           <p className="text-textSecondary">
             Project ID: {projectId}
           </p>
+
         </div>
 
 
+        {/* Create Task Button */}
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() =>
+            setIsModalOpen(true)
+          }
           className="
             flex items-center gap-2
+
             px-5 py-2.5
-            rounded-lg
+
             bg-gradient-primary
+
+            rounded-lg
+
             hover:scale-105
+
             transition
           "
         >
@@ -101,94 +129,36 @@ function ProjectDetails() {
 
 
 
-      {/* Tasks */}
-      <div className="
-        bg-white/5
-        border border-white/10
-        backdrop-blur-xl
-        rounded-xl
-        p-6
-      ">
+      {/* Task List */}
+      <div className="space-y-4">
 
-        <h2 className="font-semibold mb-4">
-          Tasks
-        </h2>
+        {tasks.length === 0 && (
 
+          <div
+            className="
+              text-center
 
-        <div className="space-y-3">
+              text-textSecondary
 
-          {tasks.map((task) => (
+              py-10
+            "
+          >
+            No tasks yet. Create your first task.
+          </div>
 
-            <div
-              key={task.id}
-              className="
-                flex justify-between items-center
-                p-4
-                rounded-lg
-                bg-white/5
-                hover:bg-white/10
-                transition
-              "
-            >
-
-              {/* Left */}
-              <div className="flex items-center gap-3">
-
-                <CheckCircle2 size={18} />
-
-                {task.title}
-
-              </div>
+        )}
 
 
-              {/* Right Controls */}
-              <div className="flex items-center gap-3">
+        {tasks.map(task => (
 
-                {/* Status dropdown */}
-                <select
-                  value={task.status}
-                  onChange={(e) =>
-                    handleStatusChange(
-                      task.id,
-                      e.target.value
-                    )
-                  }
-                  className="
-                    bg-white/5
-                    border border-white/10
-                    rounded-lg
-                    px-2 py-1
-                    text-xs
-                  "
-                >
+          <TaskCard
+            key={task.id}
+            task={task}
+            onStatusChange={handleStatusChange}
+            onDelete={handleDeleteTask}
+          />
 
-                  <option value="Todo">Todo</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Completed">Completed</option>
-
-                </select>
-
-
-                {/* Delete */}
-                <button
-                  onClick={() =>
-                    handleDeleteTask(task.id)
-                  }
-                  className="
-                    text-red-400
-                    hover:text-red-500
-                  "
-                >
-                  <Trash2 size={16} />
-                </button>
-
-              </div>
-
-            </div>
-
-          ))}
-
-        </div>
+        ))}
 
       </div>
 
@@ -197,12 +167,16 @@ function ProjectDetails() {
       {/* Modal */}
       <CreateTaskModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() =>
+          setIsModalOpen(false)
+        }
         onCreate={handleCreateTask}
       />
 
+
     </div>
   );
+
 }
 
 export default ProjectDetails;

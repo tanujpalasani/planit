@@ -1,115 +1,185 @@
-import { CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import { useState } from "react";
+import { Plus } from "lucide-react";
+
+import TaskCard from "../../components/dashboard/task/TaskCard";
+import CreateTaskModal from "../../components/dashboard/task/CreateTaskModal";
 
 function Tasks() {
 
-  const tasks = [
+  /* ---------------- Modal State ---------------- */
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+
+  /* ---------------- Tasks State ---------------- */
+
+  const [tasks, setTasks] = useState([
     {
       id: 1,
-      title: "Design landing page",
-      project: "PlanIt SaaS Platform",
-      status: "In Progress"
+      title: "Design dashboard UI",
+      status: "In Progress",
+      priority: "High",
+      assignees: ["Tanu"],
+      subtasks: ["Sidebar", "Topbar"],
+      project: "PlanIt SaaS"
     },
     {
       id: 2,
-      title: "Setup backend API",
-      project: "Client Dashboard",
-      status: "Todo"
+      title: "Create project modal",
+      status: "Todo",
+      priority: "Medium",
+      assignees: ["Tanu"],
+      subtasks: [],
+      project: "PlanIt SaaS"
     },
     {
       id: 3,
-      title: "Fix login bugs",
-      project: "Portfolio Website",
-      status: "Completed"
+      title: "Setup backend",
+      status: "Completed",
+      priority: "Low",
+      assignees: ["Tanu"],
+      subtasks: ["API", "Database"],
+      project: "Client Dashboard"
     }
-  ];
+  ]);
 
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "Completed":
-        return <CheckCircle2 size={18} className="text-green-400" />;
-      case "In Progress":
-        return <Clock size={18} className="text-orange-400" />;
-      default:
-        return <AlertCircle size={18} className="text-purple-400" />;
-    }
+  /* ---------------- Create Task ---------------- */
+
+  const handleCreateTask = (task) => {
+
+    const newTask = {
+      ...task,
+      project: "PlanIt SaaS"
+    };
+
+    setTasks(prev => [newTask, ...prev]);
+
+  };
+
+
+  /* ---------------- Status Change ---------------- */
+
+  const handleStatusChange = (taskId, newStatus) => {
+
+    setTasks(prev =>
+      prev.map(task =>
+        task.id === taskId
+          ? { ...task, status: newStatus }
+          : task
+      )
+    );
+
+  };
+
+
+  /* ---------------- Delete Task ---------------- */
+
+  const handleDeleteTask = (taskId) => {
+
+    setTasks(prev =>
+      prev.filter(task =>
+        task.id !== taskId
+      )
+    );
+
   };
 
 
   return (
     <div className="space-y-8">
 
+
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">
-          Tasks
-        </h1>
+      <div className="flex justify-between items-center">
 
-        <p className="text-textSecondary">
-          View and manage all your tasks
-        </p>
-      </div>
+        <div>
 
+          <h1 className="text-3xl font-bold">
+            Tasks
+          </h1>
 
-      {/* Tasks List */}
-      <div className="
-        bg-white/5
-        border border-white/10
-        backdrop-blur-xl
-        rounded-xl
-        p-6
-      ">
-
-        <div className="space-y-3">
-
-          {tasks.map((task) => (
-
-            <div
-              key={task.id}
-              className="
-                flex justify-between items-center
-
-                p-4 rounded-lg
-
-                bg-white/5
-                hover:bg-white/10
-
-                transition-all
-              "
-            >
-
-              <div className="flex items-center gap-3">
-
-                {getStatusIcon(task.status)}
-
-                <div>
-                  <p>{task.title}</p>
-
-                  <p className="text-sm text-textSecondary">
-                    {task.project}
-                  </p>
-                </div>
-
-              </div>
-
-
-              <span className="
-                text-xs px-3 py-1 rounded
-                bg-gradient-primary
-              ">
-                {task.status}
-              </span>
-
-            </div>
-
-          ))}
+          <p className="text-textSecondary">
+            Manage all your tasks in one place
+          </p>
 
         </div>
 
+
+        {/* Create Task Button */}
+        <button
+          onClick={() =>
+            setIsModalOpen(true)
+          }
+          className="
+            flex items-center gap-2
+
+            px-5 py-2.5
+
+            bg-gradient-primary
+
+            rounded-lg
+
+            hover:scale-105
+
+            transition
+          "
+        >
+
+          <Plus size={18} />
+
+          Create Task
+
+        </button>
+
       </div>
+
+
+
+      {/* Task List */}
+      <div className="space-y-4">
+
+        {tasks.length === 0 && (
+
+          <div className="
+            text-center
+            text-textSecondary
+            py-10
+          ">
+            No tasks found.
+          </div>
+
+        )}
+
+
+        {tasks.map(task => (
+
+          <TaskCard
+            key={task.id}
+            task={task}
+            onStatusChange={handleStatusChange}
+            onDelete={handleDeleteTask}
+          />
+
+        ))}
+
+      </div>
+
+
+
+      {/* Modal */}
+      <CreateTaskModal
+        isOpen={isModalOpen}
+        onClose={() =>
+          setIsModalOpen(false)
+        }
+        onCreate={handleCreateTask}
+      />
+
 
     </div>
   );
+
 }
 
 export default Tasks;

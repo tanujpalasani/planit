@@ -1,133 +1,147 @@
-import { Search, Bell } from "lucide-react";
+import { useLocation } from "react-router-dom";
+import { Search } from "lucide-react";
 
 function Topbar() {
+
+  const location = useLocation();
+
+  // Dynamic title based on route
+  const getTitle = () => {
+
+    if (location.pathname === "/dashboard") return "Dashboard";
+
+    if (location.pathname.startsWith("/dashboard/projects"))
+      return "Projects";
+
+    if (location.pathname.startsWith("/dashboard/tasks"))
+      return "Tasks";
+
+    if (location.pathname.startsWith("/dashboard/profile"))
+      return "Profile";
+
+    return "Dashboard";
+  };
+
+
   return (
     <header
       className="
-        sticky top-0 z-40
-
         h-16
-        w-full
-
-        bg-white/5
-        backdrop-blur-xl
-
-        border-b border-white/10
 
         flex items-center justify-between
 
-        px-6 md:px-8
+        px-6
+
+        bg-primary/80
+        backdrop-blur-xl
+
+        border-b border-white/10
       "
     >
 
       {/* Left section */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-6">
 
-        <h1 className="
-          text-lg md:text-xl
-          font-semibold
-          text-white
-        ">
-          Dashboard
+        {/* Page title */}
+        <h1 className="text-lg font-semibold">
+          {getTitle()}
         </h1>
 
-      </div>
-
-
-      {/* Right section */}
-      <div className="flex items-center gap-4">
 
         {/* Search */}
-        <div className="relative hidden md:block">
+        <div
+          className="
+            hidden md:flex
 
-          <Search
-            size={18}
-            className="
-              absolute left-3 top-1/2 -translate-y-1/2
-              text-textSecondary
-            "
-          />
+            items-center gap-2
+
+            px-3 py-1.5
+
+            bg-white/5
+            border border-white/10
+
+            rounded-lg
+
+            text-textSecondary
+          "
+        >
+
+          <Search size={16} />
 
           <input
             type="text"
             placeholder="Search..."
             className="
-              w-64
+              bg-transparent
+              outline-none
 
-              pl-10 pr-4 py-2
+              text-sm
 
-              bg-white/5
-              border border-white/10
-              rounded-lg
-
-              text-sm text-white
               placeholder:text-textSecondary
-
-              focus:outline-none
-              focus:border-purple-500
-              focus:ring-1 focus:ring-purple-500
-
-              transition-all duration-300
             "
           />
 
         </div>
 
-
-        {/* Notification */}
-        <button
-          className="
-            relative
-
-            p-2
-            rounded-lg
-
-            text-textSecondary
-            hover:text-white
-            hover:bg-white/5
-
-            transition-all duration-300
-          "
-        >
-          <Bell size={20} />
-
-          {/* Notification dot */}
-          <span className="
-            absolute top-1 right-1
-
-            w-2 h-2
-            rounded-full
-
-            bg-pink-500
-          " />
-        </button>
+      </div>
 
 
-        {/* Profile Avatar */}
+
+      {/* Right section */}
+      <div className="flex items-center gap-4">
+
+        {/* User profile */}
         <div
           className="
-            w-9 h-9
+            flex items-center gap-3
 
-            flex items-center justify-center
+            px-3 py-1.5
 
-            rounded-full
+            rounded-lg
 
-            bg-gradient-primary
-
-            text-white
-            font-semibold
+            hover:bg-white/5
 
             cursor-pointer
 
-            hover:scale-105
-
-            transition-all duration-300
+            transition-all
           "
         >
-          T
+
+          {/* Avatar */}
+          <div
+            className="
+              w-8 h-8
+
+              flex items-center justify-center
+
+              rounded-full
+
+              bg-gradient-primary
+
+              text-sm font-semibold
+            "
+          >
+            T
+          </div>
+
+
+          {/* Name */}
+          <div className="hidden sm:block">
+
+            <p className="text-sm font-medium">
+              Tanu
+            </p>
+
+            <p className="text-xs text-textSecondary">
+              Developer
+            </p>
+
+          </div>
+
         </div>
 
       </div>
+
 
     </header>
   );
