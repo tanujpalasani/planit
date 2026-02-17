@@ -8,13 +8,15 @@ function CreateTaskModal({
   onCreate
 }) {
 
-  const { teamMembers } = useAppContext();
+  const { teamMembers, projects } = useAppContext();
 
   const [title, setTitle] = useState("");
 
   const [priority, setPriority] = useState("Medium");
 
   const [status, setStatus] = useState("Todo");
+
+  const [projectId, setProjectId] = useState("");
 
   const [assigneeId, setAssigneeId] = useState("");
 
@@ -55,7 +57,7 @@ function CreateTaskModal({
 
     e.preventDefault();
 
-    if (!title.trim()) return;
+    if (!title.trim() || !projectId) return;
 
     const newTask = {
 
@@ -66,6 +68,8 @@ function CreateTaskModal({
       status,
 
       priority,
+
+      projectId: projectId ? parseInt(projectId) : null,
 
       assigneeId: assigneeId ? parseInt(assigneeId) : null,
 
@@ -80,6 +84,7 @@ function CreateTaskModal({
     setTitle("");
     setPriority("Medium");
     setStatus("Todo");
+    setProjectId("");
     setAssigneeId("");
     setSubtasks([]);
 
@@ -225,6 +230,40 @@ function CreateTaskModal({
               <option>In Progress</option>
               <option>Completed</option>
 
+            </select>
+
+          </div>
+
+
+          {/* Project */}
+          <div>
+
+            <label className="text-sm text-textSecondary">
+              Project
+            </label>
+
+            <select
+              value={projectId}
+              onChange={(e) =>
+                setProjectId(e.target.value)
+              }
+              className="
+                w-full mt-1
+
+                bg-white/5
+                border border-white/10
+
+                rounded-lg
+
+                px-3 py-2
+              "
+            >
+              <option value="">Select project</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
             </select>
 
           </div>

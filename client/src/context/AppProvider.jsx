@@ -28,6 +28,7 @@ function AppProvider({ children }) {
   const addTask = (task) => {
     const newTask = {
       id: Date.now(),
+      createdAt: new Date(),
       ...task,
     };
     setTasks((prev) => [newTask, ...prev]);

@@ -19,10 +19,7 @@ function Tasks() {
 
   const handleCreateTask = (task) => {
 
-    addTask({
-      ...task,
-      project: "PlanIt SaaS"
-    });
+    addTask(task);
 
   };
 

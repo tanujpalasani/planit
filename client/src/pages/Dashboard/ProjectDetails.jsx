@@ -10,6 +10,10 @@ function ProjectDetails() {
 
   const { projectId } = useParams();
   const { tasks, addTask, updateTaskStatus, deleteTask } = useAppContext();
+  const pid = Number(projectId);
+  const projectTasks = tasks.filter(
+    (task) => task.projectId === pid
+  );
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -18,7 +22,10 @@ function ProjectDetails() {
 
   const handleCreateTask = (task) => {
 
-    addTask(task);
+    addTask({
+      ...task,
+      projectId: pid,
+    });
 
   };
 
@@ -93,7 +100,7 @@ function ProjectDetails() {
       {/* Task List */}
       <div className="space-y-4">
 
-        {tasks.length === 0 && (
+        {projectTasks.length === 0 && (
 
           <div
             className="
@@ -110,7 +117,7 @@ function ProjectDetails() {
         )}
 
 
-        {tasks.map(task => (
+        {projectTasks.map(task => (
 
           <TaskCard
             key={task.id}
