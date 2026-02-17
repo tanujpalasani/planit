@@ -6,12 +6,19 @@ import {
 } from "lucide-react";
 
 import SubtaskItem from "./SubtaskItem";
+import { useAppContext } from "../../../context/AppContext";
 
 function TaskCard({
   task,
   onStatusChange,
   onDelete
 }) {
+
+  const { teamMembers } = useAppContext();
+
+  const assignee = teamMembers.find(
+    (member) => member.id === task.assigneeId
+  );
 
   /* ---------------- Priority Colors ---------------- */
 
@@ -167,31 +174,31 @@ function TaskCard({
 
 
 
-      {/* Assignees */}
-      {task.assignees && task.assignees.length > 0 && (
+      {/* Assignee */}
+      {assignee && (
 
         <div className="mt-3 flex items-center gap-2">
 
-          {task.assignees.map((user, index) => (
+          <div
+            className="
+              w-7 h-7
 
-            <div
-              key={index}
-              className="
-                w-7 h-7
+              rounded-full
 
-                rounded-full
+              bg-gradient-primary
 
-                bg-gradient-primary
+              flex items-center justify-center
 
-                flex items-center justify-center
+              text-xs text-white font-semibold
+            "
+            title={assignee.name}
+          >
+            {assignee.name.charAt(0).toUpperCase()}
+          </div>
 
-                text-xs text-white font-semibold
-              "
-            >
-              {user.charAt(0).toUpperCase()}
-            </div>
-
-          ))}
+          <span className="text-sm text-textSecondary">
+            {assignee.name}
+          </span>
 
         </div>
 

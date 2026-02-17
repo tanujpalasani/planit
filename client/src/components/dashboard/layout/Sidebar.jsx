@@ -6,6 +6,7 @@ import {
   FolderKanban,
   CheckSquare,
   User,
+  Users,
   LogOut,
 } from "lucide-react";
 
@@ -29,6 +30,11 @@ function Sidebar() {
       name: "Tasks",
       path: "/dashboard/tasks",
       icon: CheckSquare,
+    },
+    {
+      name: "Team",
+      path: "/dashboard/team",
+      icon: Users,
     },
     {
       name: "Profile",

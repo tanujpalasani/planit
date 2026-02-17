@@ -14,6 +14,7 @@ import Projects from "../pages/Dashboard/Projects";
 import Tasks from "../pages/Dashboard/Tasks";
 import Profile from "../pages/Dashboard/Profile";
 import ProjectDetails from "../pages/Dashboard/ProjectDetails";
+import Team from "../pages/Dashboard/Team";
 
 
 function AppRouter() {
@@ -42,6 +43,7 @@ function AppRouter() {
           {/* <Route path="tasks" element={<Tasks />} /> */}
           {/* <Route path="profile" element={<Profile />} /> */}
           <Route path="tasks" element={<Tasks />} />
+          <Route path="team" element={<Team />} />
           <Route path="profile" element={<Profile />} />
 
 

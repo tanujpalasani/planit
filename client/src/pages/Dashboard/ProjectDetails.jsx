@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { Plus } from "lucide-react";
+import { useAppContext } from "../../context/AppContext";
 
 import TaskCard from "../../components/dashboard/task/TaskCard";
 import CreateTaskModal from "../../components/dashboard/task/CreateTaskModal";
@@ -8,74 +9,34 @@ import CreateTaskModal from "../../components/dashboard/task/CreateTaskModal";
 function ProjectDetails() {
 
   const { projectId } = useParams();
-
-
-  /* ---------------- Modal State ---------------- */
+  const { tasks, addTask, updateTaskStatus, deleteTask } = useAppContext();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
 
-  /* ---------------- Tasks State ---------------- */
-
-  const [tasks, setTasks] = useState([
-    {
-      id: 1,
-      title: "Design dashboard UI",
-      status: "In Progress",
-      priority: "High",
-      assignees: ["Tanu"],
-      subtasks: [
-        "Create layout",
-        "Add components"
-      ]
-    },
-    {
-      id: 2,
-      title: "Setup authentication",
-      status: "Todo",
-      priority: "Medium",
-      assignees: ["Tanu"],
-      subtasks: [
-        "Login API",
-        "Signup API"
-      ]
-    }
-  ]);
-
-
-  /* ---------------- Create Task ---------------- */
+  /* ---------------- Create Task from Context ---------------- */
 
   const handleCreateTask = (task) => {
 
-    setTasks(prev => [task, ...prev]);
+    addTask(task);
 
   };
 
 
-  /* ---------------- Update Status ---------------- */
+  /* ---------------- Update Status from Context ---------------- */
 
   const handleStatusChange = (taskId, newStatus) => {
 
-    setTasks(prev =>
-      prev.map(task =>
-        task.id === taskId
-          ? { ...task, status: newStatus }
-          : task
-      )
-    );
+    updateTaskStatus(taskId, newStatus);
 
   };
 
 
-  /* ---------------- Delete Task ---------------- */
+  /* ---------------- Delete Task from Context ---------------- */
 
   const handleDeleteTask = (taskId) => {
 
-    setTasks(prev =>
-      prev.filter(task =>
-        task.id !== taskId
-      )
-    );
+    deleteTask(taskId);
 
   };
 

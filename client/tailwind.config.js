@@ -30,16 +30,16 @@ export default {
       },
 
       animation: {
-        fadeIn: "fadeIn 0.6s ease-in-out",
-        "fade-up": "fadeUp 0.8s ease forwards",
-        "fade-up-delay": "fadeUp 0.8s ease forwards 0.2s",
-        "fade-up-delay-2": "fadeUp 0.8s ease forwards 0.4s",
-        "fade-up-delay-3": "fadeUp 0.8s ease forwards 0.6s",
-        "fade-up-delay-4": "fadeUp 0.8s ease forwards 0.8s",
+        fadeIn: "fadeIn 0.6s ease-in-out forwards",
+        "fade-up": "fadeUp 0.8s ease-out forwards",
+        "fade-up-delay": "fadeUp 0.8s ease-out 0.2s forwards",
+        "fade-up-delay-2": "fadeUp 0.8s ease-out 0.4s forwards",
+        "fade-up-delay-3": "fadeUp 0.8s ease-out 0.6s forwards",
+        "fade-up-delay-4": "fadeUp 0.8s ease-out 0.8s forwards",
         "float": "float 6s ease-in-out infinite",
-        "float-delayed": "float 6s ease-in-out infinite 3s",
+        "float-delayed": "float 6s ease-in-out 3s infinite",
         "blob": "blob 7s infinite",
-        "blob-delay-1": "blob 7s infinite 2s",
+        "blob-delay-1": "blob 7s 2s infinite",
         "glow": "glow 3s ease-in-out infinite alternate",
       },
 
@@ -55,12 +55,12 @@ export default {
           },
         },
         fadeUp: {
-          "from": {
-            opacity: "0",
+          "0%": {
+            opacity: "0 !important",
             transform: "translate3d(0, 40px, 0)",
           },
-          "to": {
-            opacity: "1",
+          "100%": {
+            opacity: "1 !important",
             transform: "translate3d(0, 0, 0)",
           },
         },

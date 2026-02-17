@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAppContext } from "../../context/AppContext";
 
 import ProjectCard from "../../components/dashboard/project/ProjectCard";
 import CreateProjectModal from "../../components/dashboard/project/CreateProjectModal";
@@ -8,61 +9,24 @@ import CreateProjectModal from "../../components/dashboard/project/CreateProject
 function Projects() {
 
   const navigate = useNavigate();
+  const { projects, addProject } = useAppContext();
 
   /* ---------------- Modal State ---------------- */
   const [isModalOpen, setIsModalOpen] = useState(false);
 
 
-  /* ---------------- Projects State ---------------- */
-  const [projects, setProjects] = useState([
-    {
-      id: 1,
-      name: "PlanIt SaaS Platform",
-      description: "Full project management SaaS application",
-      tasksCount: 12,
-      membersCount: 4,
-      status: "In Progress",
-      color: "from-purple-500 to-pink-500",
-      createdAt: new Date()
-    },
-    {
-      id: 2,
-      name: "Portfolio Website",
-      description: "Personal developer portfolio website",
-      tasksCount: 6,
-      membersCount: 2,
-      status: "Completed",
-      color: "from-green-500 to-emerald-500",
-      createdAt: new Date()
-    },
-    {
-      id: 3,
-      name: "Client Dashboard",
-      description: "Analytics dashboard for client management",
-      tasksCount: 9,
-      membersCount: 3,
-      status: "In Progress",
-      color: "from-blue-500 to-indigo-500",
-      createdAt: new Date()
-    }
-  ]);
-
-
-  /* ---------------- Create Project ---------------- */
+  /* ---------------- Create Project from Context ---------------- */
   const handleCreateProject = (data) => {
 
-    const newProject = {
-      id: Date.now(),
+    addProject({
       name: data.name,
       description: data.description,
       tasksCount: 0,
       membersCount: 1,
       status: "In Progress",
-      color: "from-purple-500 to-pink-500",
-      createdAt: new Date()
-    };
+      color: "from-purple-500 to-pink-500"
+    });
 
-    setProjects(prev => [newProject, ...prev]);
   };
 
 

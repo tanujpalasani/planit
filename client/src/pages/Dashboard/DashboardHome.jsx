@@ -1,3 +1,6 @@
+import { useAppContext } from "../../context/AppContext";
+
+
 import {
   FolderKanban,
   CheckCircle2,
@@ -8,73 +11,55 @@ import {
 import TaskCard from "../../components/dashboard/task/TaskCard";
 
 function DashboardHome() {
+  const { user, projects, tasks } = useAppContext();
 
-  /* ---------------- Stats Data ---------------- */
+  /* ---------------- Calculate Stats from Context ---------------- */
+
+  const totalProjects = projects.length;
+  const totalTasks = tasks.length;
+  const completedTasks = tasks.filter(
+    (task) => task.status === "Completed"
+  ).length;
+  const inProgressTasks = tasks.filter(
+    (task) => task.status === "In Progress"
+  ).length;
 
   const stats = [
     {
       title: "Total Projects",
-      value: 3,
+      value: totalProjects,
       icon: FolderKanban,
       color: "from-purple-500 to-pink-500"
     },
     {
       title: "Total Tasks",
-      value: 12,
+      value: totalTasks,
       icon: ListTodo,
       color: "from-blue-500 to-indigo-500"
     },
     {
       title: "Completed Tasks",
-      value: 5,
+      value: completedTasks,
       icon: CheckCircle2,
       color: "from-green-500 to-emerald-500"
     },
     {
       title: "In Progress",
-      value: 4,
+      value: inProgressTasks,
       icon: Clock,
       color: "from-orange-500 to-red-500"
     }
   ];
 
 
-  /* ---------------- Recent Tasks ---------------- */
+  /* ---------------- Recent Tasks from Context ---------------- */
 
-  const recentTasks = [
-    {
-      id: 1,
-      title: "Design dashboard UI",
-      status: "In Progress",
-      priority: "High",
-      assignees: ["Tanu"],
-      subtasks: ["Layout", "Components"]
-    },
-    {
-      id: 2,
-      title: "Setup backend",
-      status: "Todo",
-      priority: "Medium",
-      assignees: ["Tanu"],
-      subtasks: []
-    }
-  ];
+  const recentTasks = tasks.slice(0, 5);
 
 
-  /* ---------------- Recent Projects ---------------- */
+  /* ---------------- Recent Projects from Context ---------------- */
 
-  const recentProjects = [
-    {
-      id: 1,
-      name: "PlanIt SaaS Platform",
-      tasks: 12
-    },
-    {
-      id: 2,
-      name: "Portfolio Website",
-      tasks: 6
-    }
-  ];
+  const recentProjects = projects.slice(0, 5);
 
 
   return (
@@ -85,8 +70,9 @@ function DashboardHome() {
       <div>
 
         <h1 className="text-3xl font-bold">
-          Welcome back, Tanu 👋
-        </h1>
+  Welcome back, {user.name} 👋
+</h1>
+
 
         <p className="text-textSecondary">
           Here's what's happening today.

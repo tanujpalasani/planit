@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { X, Plus } from "lucide-react";
+import { useAppContext } from "../../../context/AppContext";
 
 function CreateTaskModal({
   isOpen,
@@ -7,13 +8,15 @@ function CreateTaskModal({
   onCreate
 }) {
 
+  const { teamMembers } = useAppContext();
+
   const [title, setTitle] = useState("");
 
   const [priority, setPriority] = useState("Medium");
 
   const [status, setStatus] = useState("Todo");
 
-  const [assignee, setAssignee] = useState("");
+  const [assigneeId, setAssigneeId] = useState("");
 
   const [subtaskInput, setSubtaskInput] = useState("");
 
@@ -64,9 +67,7 @@ function CreateTaskModal({
 
       priority,
 
-      assignees: assignee
-        ? [assignee]
-        : [],
+      assigneeId: assigneeId ? parseInt(assigneeId) : null,
 
       subtasks
 
@@ -79,7 +80,7 @@ function CreateTaskModal({
     setTitle("");
     setPriority("Medium");
     setStatus("Todo");
-    setAssignee("");
+    setAssigneeId("");
     setSubtasks([]);
 
     onClose();
@@ -236,12 +237,11 @@ function CreateTaskModal({
               Assignee
             </label>
 
-            <input
-              value={assignee}
+            <select
+              value={assigneeId}
               onChange={(e) =>
-                setAssignee(e.target.value)
+                setAssigneeId(e.target.value)
               }
-              placeholder="Enter name"
               className="
                 w-full mt-1
 
@@ -252,7 +252,14 @@ function CreateTaskModal({
 
                 px-3 py-2
               "
-            />
+            >
+              <option value="">Select team member</option>
+              {teamMembers.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.name}
+                </option>
+              ))}
+            </select>
 
           </div>
 
