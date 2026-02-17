@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
 import { Plus, CheckCircle2, Trash2 } from "lucide-react";
 import { useState } from "react";
-import CreateTaskModal from "../../components/dashboard/CreateTaskModal";
+import CreateTaskModal from "../../components/dashboard/task/CreateTaskModal";
 
 function ProjectDetails() {
 

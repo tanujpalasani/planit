@@ -1,7 +1,7 @@
 import { Plus, FolderKanban, Users, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import CreateProjectModal from "../../components/dashboard/CreateProjectModal";
+import CreateProjectModal from "../../components/dashboard/project/CreateProjectModal";
 
 function Projects() {
 
