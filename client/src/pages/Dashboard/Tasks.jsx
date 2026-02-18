@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Plus, Search } from "lucide-react";
 import { useAppContext } from "../../context/useAppContext";
 
 import TaskCard from "../../components/dashboard/task/TaskCard";
@@ -9,6 +9,14 @@ function Tasks() {
 
   const [isModalOpen, setIsModalOpen] =
     useState(false);
+
+
+  /* ---------- Filter State ---------- */
+
+  const [selectedStatus, setSelectedStatus] = useState("All");
+  const [selectedPriority, setSelectedPriority] = useState("All");
+  const [selectedProject, setSelectedProject] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
 
 
   const {
@@ -63,6 +71,43 @@ function Tasks() {
   };
 
 
+  /* ---------- Filter Tasks ---------- */
+
+  const filteredTasks = useMemo(() => {
+    
+    return tasks.filter(task => {
+
+      // Filter by status
+      if (selectedStatus !== "All" && task.status !== selectedStatus) {
+        return false;
+      }
+
+      // Filter by priority
+      if (selectedPriority !== "All" && task.priority !== selectedPriority) {
+        return false;
+      }
+
+      // Filter by project
+      if (selectedProject !== "All" && task.projectId !== parseInt(selectedProject)) {
+        return false;
+      }
+
+      // Filter by search query
+      if (searchQuery.trim() !== "") {
+        const query = searchQuery.toLowerCase();
+        const titleMatch = task.title?.toLowerCase().includes(query);
+        if (!titleMatch) {
+          return false;
+        }
+      }
+
+      return true;
+
+    });
+
+  }, [tasks, selectedStatus, selectedPriority, selectedProject, searchQuery]);
+
+
   return (
 
     <div className="space-y-8">
@@ -111,6 +156,150 @@ function Tasks() {
 
 
 
+      {/* Filter Controls */}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+        {/* Status Filter */}
+
+        <div>
+
+          <label className="block text-sm text-textSecondary mb-2">
+            Status
+          </label>
+
+          <select
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+            className="
+              w-full
+              bg-white/5
+              border border-white/10
+              rounded-lg
+              px-3 py-2
+              text-white
+              focus:outline-none
+              focus:border-purple-500
+              transition
+            "
+          >
+            <option value="All">All</option>
+            <option value="Todo">Todo</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Completed">Completed</option>
+          </select>
+
+        </div>
+
+
+        {/* Priority Filter */}
+
+        <div>
+
+          <label className="block text-sm text-textSecondary mb-2">
+            Priority
+          </label>
+
+          <select
+            value={selectedPriority}
+            onChange={(e) => setSelectedPriority(e.target.value)}
+            className="
+              w-full
+              bg-white/5
+              border border-white/10
+              rounded-lg
+              px-3 py-2
+              text-white
+              focus:outline-none
+              focus:border-purple-500
+              transition
+            "
+          >
+            <option value="All">All</option>
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+          </select>
+
+        </div>
+
+
+        {/* Project Filter */}
+
+        <div>
+
+          <label className="block text-sm text-textSecondary mb-2">
+            Project
+          </label>
+
+          <select
+            value={selectedProject}
+            onChange={(e) => setSelectedProject(e.target.value)}
+            className="
+              w-full
+              bg-white/5
+              border border-white/10
+              rounded-lg
+              px-3 py-2
+              text-white
+              focus:outline-none
+              focus:border-purple-500
+              transition
+            "
+          >
+            <option value="All">All Projects</option>
+            {projects.map(project => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+
+        </div>
+
+
+        {/* Search Input */}
+
+        <div>
+
+          <label className="block text-sm text-textSecondary mb-2">
+            Search
+          </label>
+
+          <div className="relative">
+
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-textSecondary"
+              size={18}
+            />
+
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by title..."
+              className="
+                w-full
+                bg-white/5
+                border border-white/10
+                rounded-lg
+                pl-10 pr-3 py-2
+                text-white
+                placeholder:text-textSecondary
+                focus:outline-none
+                focus:border-purple-500
+                transition
+              "
+            />
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+
       {/* Task List */}
 
       <div className="space-y-4">
@@ -126,7 +315,18 @@ function Tasks() {
         )}
 
 
-        {tasks.map(task => (
+        {tasks.length > 0 && filteredTasks.length === 0 && (
+
+          <div className="text-center text-textSecondary py-10">
+
+            No tasks match the current filters.
+
+          </div>
+
+        )}
+
+
+        {filteredTasks.map(task => (
 
           <div key={task.id}>
 
