@@ -10,6 +10,7 @@ function Tasks() {
   const [isModalOpen, setIsModalOpen] =
     useState(false);
 
+  const [viewMode, setViewMode] = useState("list");
 
   /* ---------- Filter State ---------- */
 
@@ -130,27 +131,66 @@ function Tasks() {
         </div>
 
 
-        {/* Create Task Button */}
+        {/* Right Section */}
 
-        <button
-          onClick={() =>
-            setIsModalOpen(true)
-          }
-          className="
-            flex items-center gap-2
-            px-5 py-2.5
-            bg-gradient-primary
-            rounded-lg
-            hover:scale-105
-            transition
-          "
-        >
+        <div className="flex items-center gap-4">
 
-          <Plus size={18} />
+          {/* View Toggle */}
 
-          Create Task
+          <div className="flex gap-2 bg-white/5 border border-white/10 rounded-lg p-1">
 
-        </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`
+                px-4 py-2 rounded-md transition
+                ${viewMode === "list"
+                  ? "bg-gradient-primary text-white"
+                  : "text-textSecondary hover:text-white"
+                }
+              `}
+            >
+              List View
+            </button>
+
+            <button
+              onClick={() => setViewMode("kanban")}
+              className={`
+                px-4 py-2 rounded-md transition
+                ${viewMode === "kanban"
+                  ? "bg-gradient-primary text-white"
+                  : "text-textSecondary hover:text-white"
+                }
+              `}
+            >
+              Kanban View
+            </button>
+
+          </div>
+
+
+          {/* Create Task Button */}
+
+          <button
+            onClick={() =>
+              setIsModalOpen(true)
+            }
+            className="
+              flex items-center gap-2
+              px-5 py-2.5
+              bg-gradient-primary
+              rounded-lg
+              hover:scale-105
+              transition
+            "
+          >
+
+            <Plus size={18} />
+
+            Create Task
+
+          </button>
+
+        </div>
 
       </div>
 
@@ -300,56 +340,230 @@ function Tasks() {
 
 
 
-      {/* Task List */}
+      {/* Task List/Kanban View */}
 
-      <div className="space-y-4">
+      {viewMode === "list" ? (
 
-        {tasks.length === 0 && (
+        <div className="space-y-4">
 
-          <div className="text-center text-textSecondary py-10">
+          {tasks.length === 0 && (
 
-            No tasks found.
+            <div className="text-center text-textSecondary py-10">
 
-          </div>
-
-        )}
-
-
-        {tasks.length > 0 && filteredTasks.length === 0 && (
-
-          <div className="text-center text-textSecondary py-10">
-
-            No tasks match the current filters.
-
-          </div>
-
-        )}
-
-
-        {filteredTasks.map(task => (
-
-          <div key={task.id}>
-
-            {/* Project Name Label */}
-
-            <div className="text-xs text-textSecondary mb-1">
-
-              {getProjectName(task.projectId)}
+              No tasks found.
 
             </div>
 
+          )}
 
-            <TaskCard
-              task={task}
-              onStatusChange={handleStatusChange}
-              onDelete={handleDeleteTask}
-            />
+
+          {tasks.length > 0 && filteredTasks.length === 0 && (
+
+            <div className="text-center text-textSecondary py-10">
+
+              No tasks match the current filters.
+
+            </div>
+
+          )}
+
+
+          {filteredTasks.map(task => (
+
+            <div key={task.id}>
+
+              {/* Project Name Label */}
+
+              <div className="text-xs text-textSecondary mb-1">
+
+                {getProjectName(task.projectId)}
+
+              </div>
+
+
+              <TaskCard
+                task={task}
+                onStatusChange={handleStatusChange}
+                onDelete={handleDeleteTask}
+              />
+
+            </div>
+
+          ))}
+
+        </div>
+
+      ) : (
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+          {/* Todo Column */}
+
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-xl">
+
+            <div className="flex items-center justify-between mb-4">
+
+              <h3 className="font-semibold text-white">Todo</h3>
+
+              <span className="bg-white/10 px-2 py-1 rounded text-xs text-textSecondary">
+
+                {filteredTasks.filter(t => t.status === "Todo").length}
+
+              </span>
+
+            </div>
+
+            <div className="space-y-3 max-h-[70vh] overflow-y-auto">
+
+              {filteredTasks.filter(t => t.status === "Todo").length === 0 ? (
+
+                <div className="text-center text-textSecondary text-sm py-8">
+
+                  No tasks
+
+                </div>
+
+              ) : (
+
+                filteredTasks.filter(t => t.status === "Todo").map(task => (
+
+                  <div key={task.id}>
+
+                    <div className="text-xs text-textSecondary mb-1">
+
+                      {getProjectName(task.projectId)}
+
+                    </div>
+
+                    <TaskCard
+                      task={task}
+                      onStatusChange={handleStatusChange}
+                      onDelete={handleDeleteTask}
+                    />
+
+                  </div>
+
+                ))
+
+              )}
+
+            </div>
 
           </div>
 
-        ))}
 
-      </div>
+          {/* In Progress Column */}
+
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-xl">
+
+            <div className="flex items-center justify-between mb-4">
+
+              <h3 className="font-semibold text-white">In Progress</h3>
+
+              <span className="bg-white/10 px-2 py-1 rounded text-xs text-textSecondary">
+
+                {filteredTasks.filter(t => t.status === "In Progress").length}
+
+              </span>
+
+            </div>
+
+            <div className="space-y-3 max-h-[70vh] overflow-y-auto">
+
+              {filteredTasks.filter(t => t.status === "In Progress").length === 0 ? (
+
+                <div className="text-center text-textSecondary text-sm py-8">
+
+                  No tasks
+
+                </div>
+
+              ) : (
+
+                filteredTasks.filter(t => t.status === "In Progress").map(task => (
+
+                  <div key={task.id}>
+
+                    <div className="text-xs text-textSecondary mb-1">
+
+                      {getProjectName(task.projectId)}
+
+                    </div>
+
+                    <TaskCard
+                      task={task}
+                      onStatusChange={handleStatusChange}
+                      onDelete={handleDeleteTask}
+                    />
+
+                  </div>
+
+                ))
+
+              )}
+
+            </div>
+
+          </div>
+
+
+          {/* Completed Column */}
+
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-xl">
+
+            <div className="flex items-center justify-between mb-4">
+
+              <h3 className="font-semibold text-white">Completed</h3>
+
+              <span className="bg-white/10 px-2 py-1 rounded text-xs text-textSecondary">
+
+                {filteredTasks.filter(t => t.status === "Completed").length}
+
+              </span>
+
+            </div>
+
+            <div className="space-y-3 max-h-[70vh] overflow-y-auto">
+
+              {filteredTasks.filter(t => t.status === "Completed").length === 0 ? (
+
+                <div className="text-center text-textSecondary text-sm py-8">
+
+                  No tasks
+
+                </div>
+
+              ) : (
+
+                filteredTasks.filter(t => t.status === "Completed").map(task => (
+
+                  <div key={task.id}>
+
+                    <div className="text-xs text-textSecondary mb-1">
+
+                      {getProjectName(task.projectId)}
+
+                    </div>
+
+                    <TaskCard
+                      task={task}
+                      onStatusChange={handleStatusChange}
+                      onDelete={handleDeleteTask}
+                    />
+
+                  </div>
+
+                ))
+
+              )}
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
 
 
 
