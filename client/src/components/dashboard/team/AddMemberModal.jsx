@@ -1,18 +1,12 @@
 import { useState } from "react";
-import { X } from "lucide-react";
-import { createPortal } from "react-dom";
-import { useAppContext } from "../../../context/useAppContext";
+import Modal from "../../ui/Modal";
 
-function AddMemberModal({ isOpen, onClose }) {
-  const { addTeamMember } = useAppContext();
-
+function AddMemberModal({ isOpen, onClose, onAddMember }) {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     role: "Developer",
   });
-
-  if (!isOpen) return null;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -29,7 +23,7 @@ function AddMemberModal({ isOpen, onClose }) {
       return;
     }
 
-    addTeamMember(formData);
+    onAddMember(formData);
 
     setFormData({
       name: "",
@@ -42,50 +36,14 @@ function AddMemberModal({ isOpen, onClose }) {
 
   const roleOptions = ["Developer", "Designer", "Manager", "QA", "Product Owner"];
 
-  const modalContent = (
-    <div className="
-      fixed inset-0 z-50
-      
-      flex items-center justify-center
-      
-      bg-black/50
-      backdrop-blur-sm
-    ">
-      {/* Modal Card */}
-      <div className="
-        w-full max-w-md
-        
-        bg-white/5
-        border border-white/10
-        backdrop-blur-xl
-        
-        rounded-xl
-        p-6
-        
-        shadow-2xl
-        
-        animate-fade-up
-      ">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold">
-            Add Team Member
-          </h2>
-
-          <button
-            onClick={onClose}
-            className="
-              text-textSecondary
-              hover:text-white
-              transition
-            "
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Add Team Member"
+      size="md"
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
           
           {/* Name */}
           <div>
@@ -228,13 +186,9 @@ function AddMemberModal({ isOpen, onClose }) {
 
           </div>
 
-        </form>
-
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
-
-  return createPortal(modalContent, document.body);
 }
 
 export default AddMemberModal;

@@ -2,6 +2,7 @@ import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { useAppContext } from "../../context/useAppContext";
+import useAsyncAction from "../../hooks/useAsyncAction";
 
 import TaskCard from "../../components/dashboard/task/TaskCard";
 import CreateTaskModal from "../../components/dashboard/task/CreateTaskModal";
@@ -17,6 +18,7 @@ function ProjectDetails() {
     updateTaskStatus,
     deleteTask
   } = useAppContext();
+  const { runAsync } = useAsyncAction();
 
 
   const pid = Number(projectId);
@@ -42,13 +44,18 @@ function ProjectDetails() {
 
   /* ---------- Create Task ---------- */
 
-  const handleCreateTask = (task) => {
+  const handleCreateTask = async (task) => {
+    await runAsync(
+      async () => {
+        await new Promise((resolve) => setTimeout(resolve, 700));
 
-    addTask({
-      ...task,
-      projectId: pid
-    });
-
+        addTask({
+          ...task,
+          projectId: pid
+        });
+      },
+      { successMessage: "Task created successfully" },
+    );
   };
 
 

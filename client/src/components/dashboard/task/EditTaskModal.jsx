@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { X, Plus } from "lucide-react";
-import { createPortal } from "react-dom";
 import { useAppContext } from "../../../context/useAppContext";
+import Modal from "../../ui/Modal";
 
-function EditTaskModal({ onClose, task }) {
+function EditTaskModal({ isOpen, onClose, task }) {
 
   const { teamMembers, projects, updateTask } = useAppContext();
+  const isModalOpen = isOpen ?? Boolean(task);
 
   const normalizedSubtasks = (task?.subtasks || [])
     .map((subtask) =>
@@ -99,30 +100,14 @@ function EditTaskModal({ onClose, task }) {
   };
 
 
-  const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-
-      <div className="w-full max-w-md max-h-[90vh] overflow-y-auto bg-primary border border-white/10 rounded-xl p-6 shadow-2xl">
-
-        {/* Header */}
-
-        <div className="flex justify-between items-center mb-6 sticky top-0 bg-primary">
-
-          <h2 className="text-lg font-semibold text-white">
-            Edit Task
-          </h2>
-
-          <button 
-            onClick={onClose}
-            className="text-textSecondary hover:text-white transition"
-          >
-            <X size={20} />
-          </button>
-
-        </div>
-
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+  return (
+    <Modal
+      isOpen={isModalOpen}
+      onClose={onClose}
+      title="Edit Task"
+      size="md"
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
 
 
           {/* Title */}
@@ -335,14 +320,9 @@ function EditTaskModal({ onClose, task }) {
             Save Changes
           </button>
 
-        </form>
-
-      </div>
-
-    </div>
+      </form>
+    </Modal>
   );
-
-  return createPortal(modalContent, document.body);
 }
 
 export default EditTaskModal;

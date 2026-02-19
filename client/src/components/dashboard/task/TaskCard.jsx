@@ -10,6 +10,8 @@ import {
 import SubtaskItem from "./SubtaskItem";
 import EditTaskModal from "./EditTaskModal";
 import { useAppContext } from "../../../context/useAppContext";
+import { useToast } from "../../../hooks/useToast";
+import { Card, Badge, Button, Modal } from "../../ui";
 
 function TaskCard({
   task,
@@ -18,8 +20,10 @@ function TaskCard({
 }) {
 
   const { teamMembers, updateTask } = useAppContext();
+  const { addToast } = useToast();
 
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   const assignee = teamMembers.find(
     (member) => member.id === task.assigneeId
@@ -30,14 +34,20 @@ function TaskCard({
         ? { title: subtask, completed: false }
         : subtask
   );
-
-  /* ---------------- Priority Colors ---------------- */
-
-  const priorityColors = {
-    Low: "text-green-400 bg-green-400/10 border-green-400/20",
-    Medium: "text-yellow-400 bg-yellow-400/10 border-yellow-400/20",
-    High: "text-red-400 bg-red-400/10 border-red-400/20"
+  const statusBadgeVariantMap = {
+    "todo": "neutral",
+    "in-progress": "info",
+    "done": "success",
+    "in progress": "info",
+    "completed": "success"
   };
+  const priorityBadgeVariantMap = {
+    "low": "neutral",
+    "medium": "warning",
+    "high": "danger"
+  };
+  const statusKey = String(task.status || "").trim().toLowerCase();
+  const priorityKey = String(task.priority || "").trim().toLowerCase();
 
 
   /* ---------------- Toggle Subtask (future backend ready) ---------------- */
@@ -68,29 +78,45 @@ function TaskCard({
     updateTask(task.id, { subtasks: updatedSubtasks });
   };
 
+  const formatStatusLabel = (statusValue) => {
+    const normalized = String(statusValue || "").trim().toLowerCase();
+
+    if (normalized === "todo" || normalized === "to do") {
+      return "To Do";
+    }
+    if (normalized === "in-progress" || normalized === "in progress") {
+      return "In Progress";
+    }
+    if (normalized === "done" || normalized === "completed") {
+      return "Done";
+    }
+
+    return statusValue;
+  };
+
+  const handleStatusChange = (event) => {
+    const nextStatus = event.target.value;
+    onStatusChange(task.id, nextStatus);
+    addToast(`Task moved to ${formatStatusLabel(nextStatus)}`, "info");
+  };
+
+  const handleDeleteClick = (event) => {
+    event.stopPropagation();
+    setIsConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    onDelete(task.id);
+    addToast("Task deleted successfully", "success");
+    setIsConfirmOpen(false);
+  };
+
 
   return (
-    <div
-      className="
-        group
-
-        bg-white/5
-        border border-white/10
-
-        hover:border-white/20
-        hover:bg-white/10
-
-        backdrop-blur-xl
-
-        rounded-xl
-        p-4
-
-        transition-all duration-300
-      "
-    >
+    <Card hover={true} className="group p-4">
 
       {/* Top Row */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-3">
 
 
         {/* Left */}
@@ -108,7 +134,7 @@ function TaskCard({
             />
           )}
 
-          <span className="text-white font-medium">
+          <span className="text-white font-medium break-words">
             {task.title}
           </span>
 
@@ -117,96 +143,88 @@ function TaskCard({
 
 
         {/* Right Actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-end gap-2 flex-wrap">
 
 
           {/* Priority */}
           {task.priority && (
-            <div
-              className={`
-                flex items-center gap-1
-
-                text-xs px-2 py-1
-
-                rounded border
-
-                ${priorityColors[task.priority]}
-              `}
+            <Badge
+              variant={priorityBadgeVariantMap[priorityKey] || "neutral"}
+              className="gap-1"
             >
               <Flag size={12} />
               {task.priority}
-            </div>
+            </Badge>
           )}
 
+          <div className="relative">
+            <Badge
+              variant={statusBadgeVariantMap[statusKey] || "neutral"}
+              className="pr-5"
+            >
+              {task.status}
+            </Badge>
 
+            <select
+              value={task.status}
+              onChange={handleStatusChange}
+              className="
+                absolute inset-0
+                w-full h-full
+                opacity-0
+                cursor-pointer
+              "
+              aria-label="Update task status"
+            >
+              <option value="Todo">
+                Todo
+              </option>
 
-          {/* Status Dropdown */}
-          <select
-            value={task.status}
-            onChange={(e) =>
-              onStatusChange(task.id, e.target.value)
-            }
-            className="
-              bg-white/5
-              border border-white/10
+              <option value="In Progress">
+                In Progress
+              </option>
 
-              text-xs text-white
-
-              rounded-lg
-              px-2 py-1
-
-              outline-none
-              cursor-pointer
-            "
-          >
-
-            <option value="Todo">
-              Todo
-            </option>
-
-            <option value="In Progress">
-              In Progress
-            </option>
-
-            <option value="Completed">
-              Completed
-            </option>
-
-          </select>
+              <option value="Completed">
+                Completed
+              </option>
+            </select>
+          </div>
 
 
 
           {/* Delete */}
-          <button
-            onClick={() => onDelete(task.id)}
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={handleDeleteClick}
             className="
               opacity-0
               group-hover:opacity-100
-
-              text-red-400
-              hover:text-red-300
-
-              transition
+              focus-visible:opacity-100
+              h-8 w-8 p-0
+              bg-transparent text-red-400 hover:text-red-300 hover:bg-red-500/10
             "
+            aria-label="Delete task"
           >
             <Trash2 size={16} />
-          </button>
+          </Button>
 
           {/* Edit */}
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setIsEditOpen(true)}
             className="
               opacity-0
               group-hover:opacity-100
-
-              text-blue-400
-              hover:text-blue-300
-
-              transition
+              focus-visible:opacity-100
+              h-8 w-8 p-0
+              text-blue-300 hover:text-blue-200
             "
+            aria-label="Edit task"
           >
             <Edit size={16} />
-          </button>
+          </Button>
 
         </div>
 
@@ -275,7 +293,36 @@ function TaskCard({
         />
       )}
 
-    </div>
+      <Modal
+        isOpen={isConfirmOpen}
+        onClose={() => setIsConfirmOpen(false)}
+        title="Delete Task"
+        size="md"
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={() => setIsConfirmOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              type="button"
+              onClick={handleConfirmDelete}
+            >
+              Delete
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-textSecondary">
+          Are you sure you want to delete this task? This action cannot be undone.
+        </p>
+      </Modal>
+
+    </Card>
   );
 
 }

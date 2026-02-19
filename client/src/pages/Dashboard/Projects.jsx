@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../../context/useAppContext";
+import useAsyncAction from "../../hooks/useAsyncAction";
 
 import ProjectCard from "../../components/dashboard/project/ProjectCard";
 import CreateProjectModal from "../../components/dashboard/project/CreateProjectModal";
@@ -10,23 +11,29 @@ function Projects() {
 
   const navigate = useNavigate();
   const { projects, addProject } = useAppContext();
+  const { runAsync } = useAsyncAction();
 
   /* ---------------- Modal State ---------------- */
   const [isModalOpen, setIsModalOpen] = useState(false);
 
 
   /* ---------------- Create Project from Context ---------------- */
-  const handleCreateProject = (data) => {
+  const handleCreateProject = async (data) => {
+    await runAsync(
+      async () => {
+      await new Promise((resolve) => setTimeout(resolve, 700));
 
-    addProject({
-      name: data.name,
-      description: data.description,
-      tasksCount: 0,
-      membersCount: 1,
-      status: "In Progress",
-      color: "from-purple-500 to-pink-500"
-    });
-
+      addProject({
+        name: data.name,
+        description: data.description,
+        tasksCount: 0,
+        membersCount: 1,
+        status: "In Progress",
+        color: "from-purple-500 to-pink-500"
+      });
+      },
+      { successMessage: "Project created successfully" },
+    );
   };
 
 

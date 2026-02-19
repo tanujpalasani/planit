@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { X, Plus } from "lucide-react";
-import { createPortal } from "react-dom";
 import { useAppContext } from "../../../context/useAppContext";
+import Modal from "../../ui/Modal";
 
 function CreateTaskModal({ isOpen, onClose, onCreate }) {
 
@@ -14,9 +14,6 @@ function CreateTaskModal({ isOpen, onClose, onCreate }) {
   const [assigneeId, setAssigneeId] = useState("");
   const [subtaskInput, setSubtaskInput] = useState("");
   const [subtasks, setSubtasks] = useState([]);
-
-  if (!isOpen) return null;
-
 
   /* ---------- Add Subtask ---------- */
 
@@ -92,39 +89,20 @@ function CreateTaskModal({ isOpen, onClose, onCreate }) {
   };
 
 
-  const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-
-      <div className="w-full max-w-md bg-primary border border-white/10 rounded-xl p-6 shadow-2xl">
-
-        {/* Header */}
-
-        <div className="flex justify-between items-center mb-4">
-
-          <h2 className="text-lg font-semibold">
-            Create Task
-          </h2>
-
-          <button onClick={onClose}>
-            <X size={18} />
-          </button>
-
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Create Task"
+      size="md"
+    >
+      {/* If no projects exist */}
+      {projects.length === 0 ? (
+        <div className="text-center text-textSecondary py-6">
+          Create a project first before adding tasks.
         </div>
-
-
-        {/* If no projects exist */}
-
-        {projects.length === 0 ? (
-
-          <div className="text-center text-textSecondary py-6">
-
-            Create a project first before adding tasks.
-
-          </div>
-
-        ) : (
-
-          <form onSubmit={handleSubmit} className="space-y-4">
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
 
 
             {/* Title */}
@@ -335,16 +313,10 @@ function CreateTaskModal({ isOpen, onClose, onCreate }) {
               Create Task
             </button>
 
-          </form>
-
-        )}
-
-      </div>
-
-    </div>
+        </form>
+      )}
+    </Modal>
   );
-
-  return createPortal(modalContent, document.body);
 }
 
 export default CreateTaskModal;

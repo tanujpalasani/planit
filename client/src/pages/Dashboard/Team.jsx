@@ -1,12 +1,32 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { useAppContext } from "../../context/useAppContext";
+import useAsyncAction from "../../hooks/useAsyncAction";
 import TeamMemberCard from "../../components/dashboard/team/TeamMemberCard";
 import AddMemberModal from "../../components/dashboard/team/AddMemberModal";
 
 function Team() {
-  const { teamMembers, setTeamMembers } = useAppContext();
+  const { teamMembers, setTeamMembers, addTeamMember } = useAppContext();
+  const { runAsync } = useAsyncAction();
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleOpenModal = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleAddMember = async (newMember) => {
+    await runAsync(
+      async () => {
+        await new Promise((resolve) => setTimeout(resolve, 700));
+        addTeamMember(newMember);
+      },
+      { successMessage: "Team member added successfully" },
+    );
+  };
 
   const handleDeleteMember = (memberId) => {
     setTeamMembers((prev) =>
@@ -16,7 +36,6 @@ function Team() {
 
   return (
     <div className="space-y-8">
-      
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -31,7 +50,7 @@ function Team() {
 
         {/* Add Member Button */}
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleOpenModal}
           className="
             flex items-center gap-2
 
@@ -81,7 +100,7 @@ function Team() {
           </p>
 
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={handleOpenModal}
             className="
               px-6 py-2
 
@@ -103,12 +122,11 @@ function Team() {
       {/* Modal */}
       <AddMemberModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={handleCloseModal}
+        onAddMember={handleAddMember}
       />
-
     </div>
   );
 }
 
 export default Team;
-

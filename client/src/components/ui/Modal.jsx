@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "./utils";
 
@@ -9,8 +9,6 @@ const sizeClasses = {
   xl: "max-w-4xl",
 };
 
-const TRANSITION_DURATION_MS = 200;
-
 function Modal({
   isOpen,
   onClose,
@@ -20,24 +18,10 @@ function Modal({
   size = "md",
   closeOnOverlayClick = true,
 }) {
-  const [isMounted, setIsMounted] = useState(isOpen);
-  const [isVisible, setIsVisible] = useState(false);
   const titleId = useId();
 
   useEffect(() => {
-    if (isOpen) {
-      setIsMounted(true);
-      const raf = window.requestAnimationFrame(() => setIsVisible(true));
-      return () => window.cancelAnimationFrame(raf);
-    }
-
-    setIsVisible(false);
-    const timer = window.setTimeout(() => setIsMounted(false), TRANSITION_DURATION_MS);
-    return () => window.clearTimeout(timer);
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isMounted) {
+    if (!isOpen) {
       return undefined;
     }
 
@@ -49,10 +33,10 @@ function Modal({
 
     document.addEventListener("keydown", handleEsc);
     return () => document.removeEventListener("keydown", handleEsc);
-  }, [isMounted, onClose]);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
-    if (!isMounted) {
+    if (!isOpen) {
       return undefined;
     }
 
@@ -62,9 +46,9 @@ function Modal({
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [isMounted]);
+  }, [isOpen]);
 
-  if (typeof document === "undefined" || !isMounted) {
+  if (typeof document === "undefined" || !isOpen) {
     return null;
   }
 
@@ -77,10 +61,10 @@ function Modal({
   return createPortal(
     <div
       className={cn(
-        "fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-200",
-        isVisible ? "opacity-100" : "opacity-0",
+        "fixed inset-0 z-50 flex items-center justify-center p-4",
+        "animate-fadeIn",
       )}
-      aria-hidden={!isOpen}
+      aria-hidden={false}
     >
       <button
         type="button"
@@ -95,8 +79,8 @@ function Modal({
         aria-labelledby={title ? titleId : undefined}
         className={cn(
           "relative z-10 w-full overflow-hidden rounded-xl border border-white/10",
-          "bg-primary/95 shadow-2xl backdrop-blur-xl transition-all duration-200",
-          isVisible ? "scale-100 translate-y-0" : "scale-95 translate-y-2",
+          "bg-primary/95 shadow-2xl backdrop-blur-xl",
+          "animate-fade-up",
           sizeClasses[size] || sizeClasses.md,
         )}
         onClick={(event) => event.stopPropagation()}
