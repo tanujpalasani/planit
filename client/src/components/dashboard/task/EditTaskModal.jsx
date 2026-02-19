@@ -2,21 +2,14 @@ import { useState } from "react";
 import { X, Plus } from "lucide-react";
 import { useAppContext } from "../../../context/useAppContext";
 import Modal from "../../ui/Modal";
+import { normalizeSubtask, normalizeSubtasksArray } from "../../../utils/subtaskUtils";
 
 function EditTaskModal({ isOpen, onClose, task }) {
 
   const { teamMembers, projects, updateTask } = useAppContext();
   const isModalOpen = isOpen ?? Boolean(task);
 
-  const normalizedSubtasks = (task?.subtasks || [])
-    .map((subtask) =>
-      typeof subtask === "string"
-        ? { title: subtask, completed: false }
-        : {
-            title: subtask?.title || "",
-            completed: Boolean(subtask?.completed)
-          }
-    )
+  const normalizedSubtasks = normalizeSubtasksArray(task?.subtasks)
     .filter((subtask) => subtask.title.trim());
 
   const [title, setTitle] = useState(task?.title || "");
@@ -26,6 +19,9 @@ function EditTaskModal({ isOpen, onClose, task }) {
   const [assigneeId, setAssigneeId] = useState(task?.assigneeId || "");
   const [subtaskInput, setSubtaskInput] = useState("");
   const [subtasks, setSubtasks] = useState(normalizedSubtasks);
+
+  const createSubtaskId = () =>
+    `subtask-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 
   if (!task) return null;
 
@@ -38,10 +34,13 @@ function EditTaskModal({ isOpen, onClose, task }) {
 
     setSubtasks((prev) => [
       ...prev,
-      {
+      normalizeSubtask({
+        id: createSubtaskId(),
         title: subtaskInput.trim(),
-        completed: false
-      }
+        completed: false,
+        dueDate: null,
+        assigneeId: null
+      })
     ]);
 
     setSubtaskInput("");
@@ -56,6 +55,32 @@ function EditTaskModal({ isOpen, onClose, task }) {
       prev.filter((_, i) => i !== index)
     );
 
+  };
+
+  const handleSubtaskDueDateChange = (index, value) => {
+    setSubtasks((prev) =>
+      prev.map((subtask, i) =>
+        i === index
+          ? normalizeSubtask({
+              ...subtask,
+              dueDate: value || null
+            })
+          : subtask
+      )
+    );
+  };
+
+  const handleSubtaskAssigneeChange = (index, value) => {
+    setSubtasks((prev) =>
+      prev.map((subtask, i) =>
+        i === index
+          ? normalizeSubtask({
+              ...subtask,
+              assigneeId: value ? Number(value) : null
+            })
+          : subtask
+      )
+    );
   };
 
 
@@ -287,11 +312,38 @@ function EditTaskModal({ isOpen, onClose, task }) {
               {subtasks.map((sub, index) => (
 
                 <div
-                  key={index}
-                  className="flex justify-between text-xs bg-white/5 px-2 py-1 rounded"
+                  key={sub.id || index}
+                  className="flex items-center gap-2 bg-white/5 px-2 py-2 rounded"
                 >
+                  <span className="flex-1 text-xs text-white break-words">
+                    {sub.title}
+                  </span>
 
-                  {sub.title}
+                  <input
+                    type="date"
+                    value={sub.dueDate || ""}
+                    onChange={(event) =>
+                      handleSubtaskDueDateChange(index, event.target.value)
+                    }
+                    className="bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-textSecondary"
+                  />
+
+                  <select
+                    value={sub.assigneeId ?? ""}
+                    onChange={(event) =>
+                      handleSubtaskAssigneeChange(index, event.target.value)
+                    }
+                    className="bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-textSecondary"
+                  >
+                    <option value="">
+                      Unassigned
+                    </option>
+                    {teamMembers.map((member) => (
+                      <option key={member.id} value={member.id}>
+                        {member.name}
+                      </option>
+                    ))}
+                  </select>
 
                   <button
                     type="button"

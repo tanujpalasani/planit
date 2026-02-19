@@ -6,6 +6,16 @@ body {
   @apply bg-primary text-textPrimary font-sans;
 }
 
+/* Improve native select dropdown readability across dashboard forms */
+select {
+  color-scheme: dark;
+}
+
+select option {
+  background-color: #111827;
+  color: #ffffff;
+}
+
 /* Ensure animations play correctly */
 @layer utilities {
   .animate-fade-up,

@@ -1,61 +1,111 @@
 import { useAppContext } from "../../context/useAppContext";
+import { useMemo } from "react";
 
 
 import {
-  FolderKanban,
-  CheckCircle2,
-  Clock,
-  ListTodo
+  Target,
+  CalendarCheck2,
+  AlertTriangle,
+  Activity,
+  Gauge
 } from "lucide-react";
 
 import TaskCard from "../../components/dashboard/task/TaskCard";
+import { Card, Badge } from "../../components/ui";
+import { isPastDate, isWithinNextDays, sortByDateAsc } from "../../utils/dateUtils";
+import { normalizeSubtasksArray } from "../../utils/subtaskUtils";
 
 function DashboardHome() {
   const {
     user,
     projects,
     tasks,
+    teamMembers,
     updateTaskStatus,
     deleteTask
   } = useAppContext();
 
-  /* ---------------- Calculate Stats from Context ---------------- */
+  const analytics = useMemo(() => {
+    const isDoneStatus = (statusValue) => {
+      return String(statusValue || "").trim() === "Completed";
+    };
 
-  const totalProjects = projects.length;
-  const totalTasks = tasks.length;
-  const completedTasks = tasks.filter(
-    (task) => task.status === "Completed"
-  ).length;
-  const inProgressTasks = tasks.filter(
-    (task) => task.status === "In Progress"
-  ).length;
+    const parseTaskCompletionDate = (task) => {
+      const value = task?.updatedAt || task?.createdAt;
+      if (!value) {
+        return null;
+      }
 
-  const stats = [
-    {
-      title: "Total Projects",
-      value: totalProjects,
-      icon: FolderKanban,
-      color: "from-purple-500 to-pink-500"
-    },
-    {
-      title: "Total Tasks",
-      value: totalTasks,
-      icon: ListTodo,
-      color: "from-blue-500 to-indigo-500"
-    },
-    {
-      title: "Completed Tasks",
-      value: completedTasks,
-      icon: CheckCircle2,
-      color: "from-green-500 to-emerald-500"
-    },
-    {
-      title: "In Progress",
-      value: inProgressTasks,
-      icon: Clock,
-      color: "from-orange-500 to-red-500"
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? null : date;
+    };
+
+    const now = new Date();
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(now.getDate() - 7);
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter((task) =>
+      isDoneStatus(task.status)
+    ).length;
+    const completionRate = totalTasks === 0
+      ? 0
+      : Math.round((completedTasks / totalTasks) * 100);
+
+    const tasksCompletedThisWeek = tasks.filter((task) => {
+      if (!isDoneStatus(task.status)) {
+        return false;
+      }
+
+      const completedAt = parseTaskCompletionDate(task);
+      return completedAt ? completedAt >= sevenDaysAgo : false;
+    }).length;
+
+    const overdueTasks = tasks.filter((task) => {
+      if (!task?.dueDate || isDoneStatus(task.status)) {
+        return false;
+      }
+
+      return isPastDate(task.dueDate);
+    }).length;
+
+    const projectTaskCounts = projects.map((project) => {
+      const count = tasks.filter(
+        (task) => String(task.projectId) === String(project.id)
+      ).length;
+
+      return { project, count };
+    });
+
+    const mostActiveProject = projectTaskCounts.reduce(
+      (currentMax, currentProject) =>
+        currentProject.count > currentMax.count
+          ? currentProject
+          : currentMax,
+      { project: null, count: 0 }
+    );
+
+    let productivityLabel = "Needs Attention";
+    let productivityVariant = "danger";
+
+    if (completionRate > 75) {
+      productivityLabel = "High Productivity";
+      productivityVariant = "success";
+    } else if (completionRate >= 40) {
+      productivityLabel = "Moderate Productivity";
+      productivityVariant = "warning";
     }
-  ];
+
+    return {
+      completionRate,
+      tasksCompletedThisWeek,
+      overdueTasks,
+      mostActiveProjectName: mostActiveProject.project?.name || "N/A",
+      mostActiveProjectCount: mostActiveProject.count,
+      productivityLabel,
+      productivityVariant,
+      teamSize: teamMembers.length
+    };
+  }, [tasks, projects, teamMembers]);
 
 
   /* ---------------- Recent Tasks from Context ---------------- */
@@ -66,6 +116,70 @@ function DashboardHome() {
   /* ---------------- Recent Projects from Context ---------------- */
 
   const recentProjects = projects.slice(0, 5);
+  const memberById = useMemo(
+    () =>
+      new Map(
+        teamMembers.map((member) => [String(member.id), member])
+      ),
+    [teamMembers]
+  );
+  const allSubtasks = useMemo(
+    () =>
+      tasks.flatMap((task) =>
+        normalizeSubtasksArray(task.subtasks).map((subtask) => ({
+          ...subtask,
+          parentTaskTitle: task.title,
+          parentTaskId: task.id
+        }))
+      ),
+    [tasks]
+  );
+  const isSubtaskOverdue = (subtask) => {
+    if (subtask?.completed) {
+      return false;
+    }
+
+    return isPastDate(subtask?.dueDate);
+  };
+
+  const upcomingSubtasks = useMemo(
+    () =>
+      allSubtasks
+        .filter((subtask) => {
+          if (subtask.completed || !subtask.dueDate) {
+            return false;
+          }
+
+          return isWithinNextDays(subtask.dueDate, 7);
+        })
+        .sort((a, b) => sortByDateAsc(a?.dueDate, b?.dueDate))
+        .slice(0, 5),
+    [allSubtasks]
+  );
+  const mySubtasks = useMemo(
+    () =>
+      allSubtasks
+        .filter(
+          (subtask) =>
+            Boolean(user?.id) &&
+            !subtask.completed &&
+            String(subtask.assigneeId || "") === String(user.id)
+        )
+        .sort((a, b) => sortByDateAsc(a?.dueDate, b?.dueDate)),
+    [allSubtasks, user]
+  );
+  const formatDueDate = (dueDateValue) => {
+    if (!dueDateValue) {
+      return "No due date";
+    }
+
+    const date = new Date(`${dueDateValue}T00:00:00`);
+    if (Number.isNaN(date.getTime())) {
+      return "No due date";
+    }
+
+    return date.toLocaleDateString();
+  };
 
 
   return (
@@ -93,76 +207,69 @@ function DashboardHome() {
         className="
           grid grid-cols-1
           sm:grid-cols-2
-          lg:grid-cols-4
+          xl:grid-cols-5
           gap-6
         "
       >
+        <Card hover={true} className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Target size={20} className="text-blue-300" />
+            <span className="text-2xl font-bold">
+              {analytics.completionRate}%
+            </span>
+          </div>
+          <p className="text-sm text-textSecondary">
+            Completion Rate
+          </p>
+        </Card>
 
-        {stats.map((stat, index) => {
+        <Card hover={true} className="space-y-4">
+          <div className="flex items-center justify-between">
+            <CalendarCheck2 size={20} className="text-green-300" />
+            <span className="text-2xl font-bold">
+              {analytics.tasksCompletedThisWeek}
+            </span>
+          </div>
+          <p className="text-sm text-textSecondary">
+            Tasks Completed This Week
+          </p>
+        </Card>
 
-          const Icon = stat.icon;
+        <Card hover={true} className="space-y-4">
+          <div className="flex items-center justify-between">
+            <AlertTriangle size={20} className="text-amber-300" />
+            <span className="text-2xl font-bold">
+              {analytics.overdueTasks}
+            </span>
+          </div>
+          <p className="text-sm text-textSecondary">
+            Overdue Tasks
+          </p>
+        </Card>
 
-          const gradientMap = {
-            "from-purple-500 to-pink-500": "linear-gradient(to right, rgb(168, 85, 247), rgb(236, 72, 153))",
-            "from-blue-500 to-indigo-500": "linear-gradient(to right, rgb(59, 130, 246), rgb(99, 102, 241))",
-            "from-green-500 to-emerald-500": "linear-gradient(to right, rgb(34, 197, 94), rgb(16, 185, 129))",
-            "from-orange-500 to-red-500": "linear-gradient(to right, rgb(249, 115, 22), rgb(239, 68, 68))"
-          };
+        <Card hover={true} className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Activity size={20} className="text-purple-300" />
+            <span className="text-lg font-semibold text-right">
+              {analytics.mostActiveProjectName}
+            </span>
+          </div>
+          <p className="text-sm text-textSecondary">
+            Most Active Project ({analytics.mostActiveProjectCount} tasks)
+          </p>
+        </Card>
 
-          return (
-            <div
-              key={index}
-              className="
-                relative
-
-                bg-white/5
-                border border-white/10
-
-                rounded-xl
-                p-6
-
-                hover:bg-white/10
-
-                transition
-              "
-            >
-
-              {/* Glow */}
-              <div
-                style={{
-                  background: gradientMap[stat.color] || "transparent"
-                }}
-                className="
-                  absolute inset-0
-                  opacity-10 blur-xl
-                  rounded-xl
-                "
-              />
-
-
-              {/* Content */}
-              <div className="relative z-10">
-
-                <div className="flex justify-between items-center mb-4">
-
-                  <Icon size={20} />
-
-                  <span className="text-2xl font-bold">
-                    {stat.value}
-                  </span>
-
-                </div>
-
-                <p className="text-textSecondary text-sm">
-                  {stat.title}
-                </p>
-
-              </div>
-
-            </div>
-          );
-
-        })}
+        <Card hover={true} className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Gauge size={20} className="text-pink-300" />
+            <Badge variant={analytics.productivityVariant}>
+              {analytics.productivityLabel}
+            </Badge>
+          </div>
+          <p className="text-sm text-textSecondary">
+            Productivity Badge ({analytics.teamSize} team members)
+          </p>
+        </Card>
 
       </div>
 
@@ -268,6 +375,129 @@ function DashboardHome() {
 
         </div>
 
+      </div>
+
+      {/* Subtasks Panels */}
+      <div
+        className="
+          grid grid-cols-1
+          lg:grid-cols-2
+          gap-6
+        "
+      >
+        <Card className="space-y-4">
+          <h2 className="font-semibold">
+            Upcoming Deadlines
+          </h2>
+
+          <div className="space-y-3">
+            {upcomingSubtasks.length === 0 ? (
+              <p className="text-sm text-textSecondary">
+                No upcoming subtask deadlines.
+              </p>
+            ) : (
+              upcomingSubtasks.map((subtask) => {
+                const assignee = subtask.assigneeId
+                  ? memberById.get(String(subtask.assigneeId))
+                  : null;
+
+                return (
+                  <div
+                    key={`${subtask.parentTaskId}-${subtask.id}`}
+                    className="flex items-center justify-between gap-3 rounded-lg bg-white/5 px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm text-white">
+                        {subtask.title}
+                      </p>
+                      <p className="truncate text-xs text-textSecondary">
+                        {subtask.parentTaskTitle}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-textSecondary whitespace-nowrap">
+                        {formatDueDate(subtask.dueDate)}
+                      </span>
+
+                      {isSubtaskOverdue(subtask) && (
+                        <Badge variant="danger">
+                          Overdue
+                        </Badge>
+                      )}
+
+                      {assignee && (
+                        <div
+                          className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-primary text-[10px] font-semibold text-white"
+                          title={assignee.name}
+                        >
+                          {assignee.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </Card>
+
+        <Card className="space-y-4">
+          <h2 className="font-semibold">
+            My Subtasks
+          </h2>
+
+          <div className="space-y-3">
+            {mySubtasks.length === 0 ? (
+              <p className="text-sm text-textSecondary">
+                No assigned subtasks.
+              </p>
+            ) : (
+              mySubtasks.map((subtask) => {
+                const assignee = subtask.assigneeId
+                  ? memberById.get(String(subtask.assigneeId))
+                  : null;
+
+                return (
+                  <div
+                    key={`${subtask.parentTaskId}-${subtask.id}`}
+                    className="flex items-center justify-between gap-3 rounded-lg bg-white/5 px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm text-white">
+                        {subtask.title}
+                      </p>
+                      <p className="truncate text-xs text-textSecondary">
+                        {subtask.parentTaskTitle}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-textSecondary whitespace-nowrap">
+                        {formatDueDate(subtask.dueDate)}
+                      </span>
+
+                      {isSubtaskOverdue(subtask) && (
+                        <Badge variant="danger">
+                          Overdue
+                        </Badge>
+                      )}
+
+                      {assignee && (
+                        <div
+                          className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-primary text-[10px] font-semibold text-white"
+                          title={assignee.name}
+                        >
+                          {assignee.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </Card>
       </div>
 
 

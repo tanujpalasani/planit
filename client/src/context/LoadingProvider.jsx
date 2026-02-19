@@ -3,14 +3,15 @@ import GlobalLoader from "../components/ui/GlobalLoader";
 import LoadingContext from "./LoadingContext";
 
 function LoadingProvider({ children }) {
-  const [isLoading, setIsLoading] = useState(false);
+  const [loadingCount, setLoadingCount] = useState(0);
+  const isLoading = loadingCount > 0;
 
   const startLoading = useCallback(() => {
-    setIsLoading(true);
+    setLoadingCount((prev) => prev + 1);
   }, []);
 
   const stopLoading = useCallback(() => {
-    setIsLoading(false);
+    setLoadingCount((prev) => Math.max(prev - 1, 0));
   }, []);
 
   const value = useMemo(

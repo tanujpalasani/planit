@@ -6,26 +6,23 @@ import {
   Edit,
   Save
 } from "lucide-react";
+import { useAppContext } from "../../context/useAppContext";
 
 function Profile() {
+  const { user, setUser } = useAppContext();
 
   /* ---------------- User State ---------------- */
 
   const [isEditing, setIsEditing] = useState(false);
-
-  const [user, setUser] = useState({
-    name: "Tanu",
-    email: "tanu@example.com",
-    role: "Developer"
-  });
+  const [formUser, setFormUser] = useState(user || {});
 
 
   /* ---------------- Handle Change ---------------- */
 
   const handleChange = (e) => {
 
-    setUser({
-      ...user,
+    setFormUser({
+      ...formUser,
       [e.target.name]: e.target.value
     });
 
@@ -35,10 +32,12 @@ function Profile() {
   /* ---------------- Save ---------------- */
 
   const handleSave = () => {
+    setUser({
+      ...user,
+      ...formUser
+    });
 
     setIsEditing(false);
-
-    // Later connect backend here
 
   };
 
@@ -65,11 +64,15 @@ function Profile() {
 
         {/* Edit / Save Button */}
         <button
-          onClick={() =>
-            isEditing
-              ? handleSave()
-              : setIsEditing(true)
-          }
+          onClick={() => {
+            if (isEditing) {
+              handleSave();
+              return;
+            }
+
+            setFormUser(user || {});
+            setIsEditing(true);
+          }}
           className="
             flex items-center gap-2
 
@@ -132,7 +135,7 @@ function Profile() {
               text-2xl font-bold
             "
           >
-            {user.name.charAt(0)}
+            {(user?.name?.charAt(0) || "U").toUpperCase()}
           </div>
 
 
@@ -147,7 +150,7 @@ function Profile() {
               {isEditing ? (
                 <input
                   name="name"
-                  value={user.name}
+                  value={formUser.name || ""}
                   onChange={handleChange}
                   className="
                     bg-white/5
@@ -159,7 +162,7 @@ function Profile() {
                   "
                 />
               ) : (
-                <span>{user.name}</span>
+                <span>{user?.name || "User"}</span>
               )}
 
             </div>
@@ -173,7 +176,7 @@ function Profile() {
               {isEditing ? (
                 <input
                   name="email"
-                  value={user.email}
+                  value={formUser.email || ""}
                   onChange={handleChange}
                   className="
                     bg-white/5
@@ -185,7 +188,7 @@ function Profile() {
                   "
                 />
               ) : (
-                <span>{user.email}</span>
+                <span>{user?.email || "No email"}</span>
               )}
 
             </div>
@@ -199,7 +202,7 @@ function Profile() {
               {isEditing ? (
                 <input
                   name="role"
-                  value={user.role}
+                  value={formUser.role || ""}
                   onChange={handleChange}
                   className="
                     bg-white/5
@@ -211,7 +214,7 @@ function Profile() {
                   "
                 />
               ) : (
-                <span>{user.role}</span>
+                <span>{user?.role || "-"}</span>
               )}
 
             </div>

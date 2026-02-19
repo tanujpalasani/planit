@@ -1,9 +1,14 @@
 import { useLocation } from "react-router-dom";
 import { Search } from "lucide-react";
+import { useAppContext } from "../../../context/useAppContext";
 
 function Topbar() {
 
   const location = useLocation();
+  const { user } = useAppContext();
+  const displayName = user?.name?.trim() || "User";
+  const displayEmail = user?.email?.trim() || "No email";
+  const avatarLetter = displayName.charAt(0).toUpperCase();
 
   // Dynamic title based on route
   const getTitle = () => {
@@ -121,7 +126,7 @@ function Topbar() {
               text-sm font-semibold
             "
           >
-            T
+            {avatarLetter}
           </div>
 
 
@@ -129,11 +134,11 @@ function Topbar() {
           <div className="hidden sm:block">
 
             <p className="text-sm font-medium">
-              Tanu
+              {displayName}
             </p>
 
             <p className="text-xs text-textSecondary">
-              Developer
+              {displayEmail}
             </p>
 
           </div>

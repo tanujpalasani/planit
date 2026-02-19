@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircle2,
   Circle,
   Trash2,
   Flag,
-  Edit
+  Edit,
+  ChevronDown
 } from "lucide-react";
 
 import SubtaskItem from "./SubtaskItem";
@@ -12,6 +13,8 @@ import EditTaskModal from "./EditTaskModal";
 import { useAppContext } from "../../../context/useAppContext";
 import { useToast } from "../../../hooks/useToast";
 import { Card, Badge, Button, Modal } from "../../ui";
+import { isPastDate } from "../../../utils/dateUtils";
+import { normalizeSubtasksArray } from "../../../utils/subtaskUtils";
 
 function TaskCard({
   task,
@@ -19,35 +22,91 @@ function TaskCard({
   onDelete
 }) {
 
-  const { teamMembers, updateTask } = useAppContext();
+  const { user, teamMembers, updateTask } = useAppContext();
   const { addToast } = useToast();
 
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [dropTargetIndex, setDropTargetIndex] = useState(null);
+  const hasAutoCompletedRef = useRef(false);
 
   const assignee = teamMembers.find(
     (member) => member.id === task.assigneeId
   );
-  const normalizedSubtasks = (task.subtasks || []).map(
-    (subtask) =>
-      typeof subtask === "string"
-        ? { title: subtask, completed: false }
-        : subtask
+  const normalizedSubtasks = useMemo(
+    () => normalizeSubtasksArray(task.subtasks),
+    [task.subtasks]
   );
+  const isSubtaskOverdue = (subtask) => {
+    if (subtask?.completed) {
+      return false;
+    }
+
+    return isPastDate(subtask?.dueDate);
+  };
+
+  const overdueCount = useMemo(
+    () =>
+      normalizedSubtasks.filter((subtask) => {
+        if (subtask?.completed) {
+          return false;
+        }
+
+        return isPastDate(subtask?.dueDate);
+      }).length,
+    [normalizedSubtasks]
+  );
+  const {
+    totalSubtasks,
+    completedSubtasks,
+    completionPercent
+  } = useMemo(() => {
+    const total = normalizedSubtasks.length;
+    const completed = normalizedSubtasks.filter(
+      (subtask) => Boolean(subtask?.completed)
+    ).length;
+    const percent = total > 0
+      ? Math.round((completed / total) * 100)
+      : 0;
+
+    return {
+      totalSubtasks: total,
+      completedSubtasks: completed,
+      completionPercent: percent
+    };
+  }, [normalizedSubtasks]);
+  const subtasksAssignedToCurrentUser = !user?.id
+    ? 0
+    : normalizedSubtasks.filter(
+      (subtask) => String(subtask.assigneeId || "") === String(user.id)
+    ).length;
   const statusBadgeVariantMap = {
-    "todo": "neutral",
-    "in-progress": "info",
-    "done": "success",
-    "in progress": "info",
-    "completed": "success"
+    "Todo": "neutral",
+    "In Progress": "info",
+    "Completed": "success"
   };
   const priorityBadgeVariantMap = {
     "low": "neutral",
     "medium": "warning",
     "high": "danger"
   };
-  const statusKey = String(task.status || "").trim().toLowerCase();
+  const statusKey = String(task.status || "").trim();
   const priorityKey = String(task.priority || "").trim().toLowerCase();
+  const isTaskDone = statusKey === "Completed";
+
+  useEffect(() => {
+    if (!hasAutoCompletedRef.current && !isTaskDone && totalSubtasks > 0 && completionPercent === 100) {
+      onStatusChange(task.id, "Completed");
+      hasAutoCompletedRef.current = true;
+      return;
+    }
+
+    if (completionPercent < 100 || isTaskDone) {
+      hasAutoCompletedRef.current = false;
+    }
+  }, [completionPercent, isTaskDone, onStatusChange, task.id, totalSubtasks]);
 
 
   /* ---------------- Toggle Subtask (future backend ready) ---------------- */
@@ -78,16 +137,80 @@ function TaskCard({
     updateTask(task.id, { subtasks: updatedSubtasks });
   };
 
-  const formatStatusLabel = (statusValue) => {
-    const normalized = String(statusValue || "").trim().toLowerCase();
+  const handleUpdateSubtask = (subtaskId, updatedTitle, index) => {
+    const trimmedTitle = String(updatedTitle || "").trim();
+    if (!trimmedTitle) {
+      return;
+    }
 
-    if (normalized === "todo" || normalized === "to do") {
+    const updatedSubtasks = normalizedSubtasks.map((subtask, i) => {
+      const hasId = subtaskId !== undefined && subtaskId !== null;
+      const isTarget = hasId
+        ? subtask?.id === subtaskId
+        : i === index;
+
+      if (!isTarget) {
+        return subtask;
+      }
+
+      return {
+        ...subtask,
+        title: trimmedTitle
+      };
+    });
+
+    updateTask(task.id, { subtasks: updatedSubtasks });
+  };
+
+  const handleSubtaskDragStart = (index) => {
+    setDraggedIndex(index);
+    setDropTargetIndex(index);
+  };
+
+  const handleSubtaskDragOver = (event, index) => {
+    event.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) {
+      return;
+    }
+    setDropTargetIndex(index);
+  };
+
+  const handleSubtaskDrop = (targetIndex) => {
+    if (
+      draggedIndex === null ||
+      draggedIndex === targetIndex ||
+      draggedIndex < 0 ||
+      targetIndex < 0
+    ) {
+      setDraggedIndex(null);
+      setDropTargetIndex(null);
+      return;
+    }
+
+    const reorderedSubtasks = [...normalizedSubtasks];
+    const [draggedSubtask] = reorderedSubtasks.splice(draggedIndex, 1);
+    reorderedSubtasks.splice(targetIndex, 0, draggedSubtask);
+
+    updateTask(task.id, { subtasks: reorderedSubtasks });
+    setDraggedIndex(null);
+    setDropTargetIndex(null);
+  };
+
+  const handleSubtaskDragEnd = () => {
+    setDraggedIndex(null);
+    setDropTargetIndex(null);
+  };
+
+  const formatStatusLabel = (statusValue) => {
+    const normalized = String(statusValue || "").trim();
+
+    if (normalized === "Todo") {
       return "To Do";
     }
-    if (normalized === "in-progress" || normalized === "in progress") {
+    if (normalized === "In Progress") {
       return "In Progress";
     }
-    if (normalized === "done" || normalized === "completed") {
+    if (normalized === "Completed") {
       return "Done";
     }
 
@@ -113,16 +236,20 @@ function TaskCard({
 
 
   return (
-    <Card hover={true} className="group p-4">
+    <Card
+      hover={true}
+      className="group p-4"
+      data-subtasks-assigned={subtasksAssignedToCurrentUser}
+    >
 
       {/* Top Row */}
       <div className="flex items-start justify-between gap-3">
 
 
         {/* Left */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-1 items-start gap-3">
 
-          {task.status === "Completed" ? (
+          {isTaskDone ? (
             <CheckCircle2
               className="text-green-400"
               size={18}
@@ -134,9 +261,32 @@ function TaskCard({
             />
           )}
 
-          <span className="text-white font-medium break-words">
-            {task.title}
-          </span>
+          <div className="min-w-0 flex-1 space-y-3">
+            <span className="block text-white font-medium break-words">
+              {task.title}
+            </span>
+
+            {totalSubtasks > 0 && (
+              <div className="space-y-2">
+                <div className="h-2 w-full rounded-full bg-gray-700">
+                  <div
+                    className="h-full rounded-full bg-gradient-primary transition-all duration-300"
+                    style={{ width: `${completionPercent}%` }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-2">
+                  <Badge variant="info">
+                    {completionPercent}% Complete
+                  </Badge>
+
+                  <span className="text-xs text-textSecondary">
+                    {completedSubtasks}/{totalSubtasks} subtasks
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
 
         </div>
 
@@ -189,6 +339,29 @@ function TaskCard({
               </option>
             </select>
           </div>
+
+          {overdueCount > 0 && (
+            <Badge variant="danger">
+              {overdueCount} Overdue
+            </Badge>
+          )}
+
+          {totalSubtasks > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsExpanded((prev) => !prev)}
+              className="h-8 w-8 p-0 text-textSecondary hover:text-white"
+              aria-label={isExpanded ? "Collapse subtasks" : "Expand subtasks"}
+            >
+              <ChevronDown
+                size={16}
+                className={`transition-transform duration-200 ${
+                  isExpanded ? "rotate-0" : "-rotate-90"
+                }`}
+              />
+            </Button>
+          )}
 
 
 
@@ -265,18 +438,28 @@ function TaskCard({
 
 
       {/* Subtasks */}
-      {normalizedSubtasks.length > 0 && (
+      {normalizedSubtasks.length > 0 && isExpanded && (
 
         <div className="mt-4 space-y-2">
 
           {normalizedSubtasks.map((subtask, index) => (
 
             <SubtaskItem
-              key={index}
+              key={subtask.id || index}
               subtask={subtask}
               index={index}
               onToggle={handleToggleSubtask}
               onDelete={handleDeleteSubtask}
+              onUpdate={handleUpdateSubtask}
+              dueDate={subtask.dueDate}
+              assigneeId={subtask.assigneeId}
+              isOverdue={isSubtaskOverdue(subtask)}
+              isDragging={draggedIndex === index}
+              isDropTarget={dropTargetIndex === index && draggedIndex !== index}
+              onDragStartSubtask={handleSubtaskDragStart}
+              onDragOverSubtask={handleSubtaskDragOver}
+              onDropSubtask={handleSubtaskDrop}
+              onDragEndSubtask={handleSubtaskDragEnd}
             />
 
           ))}
