@@ -23,9 +23,7 @@ function Projects() {
   const handleCreateProject = async (data) => {
     return runAsync(
       async () => {
-        await new Promise((resolve) => setTimeout(resolve, 700));
-
-        const createdProject = addProject({
+        const createdProject = await addProject({
           name: data.name,
           description: data.description,
           tasksCount: 0,

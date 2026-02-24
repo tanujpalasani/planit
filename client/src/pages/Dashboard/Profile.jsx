@@ -30,7 +30,7 @@ function Profile() {
     }));
   };
 
-  const handleEditToggle = () => {
+  const handleEditToggle = async () => {
     if (!isEditing) {
       setError("");
       setFormUser({
@@ -48,7 +48,7 @@ function Profile() {
       return;
     }
 
-    const updatedUser = updateCurrentUserProfile({
+    const updatedUser = await updateCurrentUserProfile({
       name: nextName,
       email: nextEmail,
     });

@@ -38,8 +38,7 @@ function Tasks({ assignedOnly = false }) {
   const handleCreateTask = async (task) => {
     return runAsync(
       async () => {
-        await new Promise((resolve) => setTimeout(resolve, 700));
-        const createdTask = addTask(task);
+        const createdTask = await addTask(task);
         if (!createdTask) {
           throw new Error("Failed to create task");
         }
@@ -53,14 +52,14 @@ function Tasks({ assignedOnly = false }) {
   /* ---------- Update Status ---------- */
 
   const handleStatusChange =
-    (taskId, newStatus) => {
-      updateTaskStatus(taskId, newStatus);
+    async (taskId, newStatus) => {
+      await updateTaskStatus(taskId, newStatus);
     };
 
   /* ---------- Delete Task ---------- */
 
-  const handleDeleteTask = (taskId) => {
-    deleteTask(taskId);
+  const handleDeleteTask = async (taskId) => {
+    await deleteTask(taskId);
   };
 
   /* ---------- Resolve Project Name ---------- */

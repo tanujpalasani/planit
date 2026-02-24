@@ -1,9 +1,28 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AppContext from "./AppContext";
 import { normalizeSubtasksArray } from "../utils/subtaskUtils";
 import { useToast } from "../hooks/useToast";
+import {
+  addProject as addProjectService,
+  addTask as addTaskService,
+  addTeamMember as addTeamMemberService,
+  clearLegacyPersistence,
+  clearToken,
+  deleteProject as deleteProjectService,
+  deleteTask as deleteTaskService,
+  getCurrentUser,
+  getProjects as getProjectsService,
+  getTasks as getTasksService,
+  getTeamMembers as getTeamMembersService,
+  getToken,
+  login as loginService,
+  registerAdmin as registerAdminService,
+  removeTeamMember as removeTeamMemberService,
+  saveToken,
+  updateTask as updateTaskService,
+  updateTaskStatus as updateTaskStatusService,
+} from "../services/dataService";
 
-const STORAGE_KEY = "planit_v1";
 const TEAM_MEMBER_ROLES = {
   ADMIN: "Admin",
   MEMBER: "Member",
@@ -15,26 +34,10 @@ const defaultUser = {
   id: null,
   name: "",
   email: "",
-  password: "",
   role: "",
 };
 
-const defaultState = {
-  user: defaultUser,
-  activeWorkspaceId: "",
-  workspacesById: {},
-};
-
 const toIdKey = (value) => String(value ?? "");
-
-const createEmptyWorkspace = () => ({
-  teamMembers: [],
-  projects: [],
-  tasks: [],
-});
-
-const getWorkspaceIdFromAdminEmail = (emailValue) =>
-  `admin:${String(emailValue || "").trim().toLowerCase()}`;
 
 const normalizeTaskStatus = (statusValue) => {
   const raw = String(statusValue || "").trim();
@@ -91,10 +94,9 @@ const sanitizeUser = (user) => {
     return defaultUser;
   }
 
-  const id = user.id;
+  const id = user.id ?? user._id;
   const name = typeof user.name === "string" ? user.name.trim() : "";
   const email = typeof user.email === "string" ? user.email.trim() : "";
-  const password = typeof user.password === "string" ? user.password : "";
   const role = normalizeUserRole(user.role);
 
   if (!name || !email) {
@@ -106,12 +108,9 @@ const sanitizeUser = (user) => {
   }
 
   return {
-    ...defaultUser,
-    ...user,
     id,
     name,
     email,
-    password,
     role,
   };
 };
@@ -121,45 +120,13 @@ const sanitizeProjects = (projects) => {
     return [];
   }
 
-  const sanitizeMemberIds = (memberIds) => {
-    if (!Array.isArray(memberIds)) {
-      return [];
-    }
-
-    const deduped = [];
-    const seen = new Set();
-
-    memberIds.forEach((memberId) => {
-      const isValidType = typeof memberId === "string" || typeof memberId === "number";
-      if (!isValidType) {
-        return;
-      }
-
-      const key = `${typeof memberId}:${memberId}`;
-      if (seen.has(key)) {
-        return;
-      }
-
-      seen.add(key);
-      deduped.push(memberId);
-    });
-
-    return deduped;
-  };
-
   return projects
     .filter((project) => project && typeof project === "object")
     .map((project) => {
-      const id = project.id;
-      const titleSource = typeof project.title === "string"
-        ? project.title
-        : project.name;
-      const title = typeof titleSource === "string"
-        ? titleSource.trim()
-        : "";
-      const description = typeof project.description === "string"
-        ? project.description
-        : "";
+      const id = project.id ?? project._id;
+      const titleSource = typeof project.title === "string" ? project.title : project.name;
+      const title = typeof titleSource === "string" ? titleSource.trim() : "";
+      const description = typeof project.description === "string" ? project.description : "";
 
       if (!title) {
         return null;
@@ -175,7 +142,9 @@ const sanitizeProjects = (projects) => {
         title,
         name: project.name || title,
         description,
-        memberIds: sanitizeMemberIds(project.memberIds),
+        memberIds: Array.isArray(project.memberIds)
+          ? project.memberIds.map((memberId) => (typeof memberId === "object" ? (memberId._id ?? memberId.id) : memberId))
+          : [],
       };
     })
     .filter(Boolean);
@@ -189,7 +158,7 @@ const sanitizeTeamMembers = (teamMembers) => {
   return teamMembers
     .filter((member) => member && typeof member === "object")
     .map((member) => {
-      const id = member.id;
+      const id = member.id ?? member._id;
       const name = typeof member.name === "string" ? member.name.trim() : "";
       const email = typeof member.email === "string" ? member.email.trim() : "";
       const password = typeof member.password === "string" ? member.password : "";
@@ -222,12 +191,13 @@ const sanitizeTasks = (tasks) => {
   return tasks
     .filter((task) => task && typeof task === "object")
     .map((task) => {
-      const id = task.id;
+      const id = task.id ?? task._id;
       const title = typeof task.title === "string" ? task.title.trim() : "";
-      const projectId = task.projectId;
-      const priority = typeof task.priority === "string" && task.priority.trim()
-        ? task.priority
-        : "Medium";
+      const projectIdRaw = task.projectId;
+      const projectId = typeof projectIdRaw === "object"
+        ? (projectIdRaw._id ?? projectIdRaw.id)
+        : projectIdRaw;
+      const priority = typeof task.priority === "string" && task.priority.trim() ? task.priority : "Medium";
       const status = normalizeTaskStatus(task.status);
       const completedAt = resolveTaskCompletionDate(task, null);
 
@@ -251,182 +221,37 @@ const sanitizeTasks = (tasks) => {
         completedAt,
         projectId,
         priority,
-        subtasks: normalizeSubtasksArray(task.subtasks),
+        subtasks: normalizeSubtasksArray(
+          Array.isArray(task.subtasks)
+            ? task.subtasks.map((subtask) => ({
+                ...subtask,
+                id: subtask.id ?? subtask._id,
+                assigneeId: typeof subtask.assigneeId === "object"
+                  ? (subtask.assigneeId._id ?? subtask.assigneeId.id)
+                  : subtask.assigneeId,
+              }))
+            : [],
+        ),
       };
     })
     .filter(Boolean);
 };
 
-const sanitizeWorkspace = (workspace) => {
-  if (!workspace || typeof workspace !== "object") {
-    return createEmptyWorkspace();
-  }
-
-  const teamMembers = sanitizeTeamMembers(workspace.teamMembers);
-  const projects = sanitizeProjects(workspace.projects);
-  const tasks = sanitizeTasks(workspace.tasks);
-  const teamMemberIdSet = new Set(teamMembers.map((member) => toIdKey(member.id)));
-  const projectIdSet = new Set(projects.map((project) => toIdKey(project.id)));
-
-  const reconciledProjects = projects.map((project) => ({
-    ...project,
-    memberIds: Array.isArray(project.memberIds)
-      ? project.memberIds.filter((memberId) => teamMemberIdSet.has(toIdKey(memberId)))
-      : [],
-  }));
-
-  const reconciledTasks = tasks
-    .filter((task) => projectIdSet.has(toIdKey(task.projectId)))
-    .map((task) => ({
-      ...task,
-      assigneeId: teamMemberIdSet.has(toIdKey(task.assigneeId)) ? task.assigneeId : null,
-      subtasks: normalizeSubtasksArray(task.subtasks).map((subtask) => ({
-        ...subtask,
-        assigneeId: teamMemberIdSet.has(toIdKey(subtask.assigneeId)) ? subtask.assigneeId : null,
-      })),
-    }));
-
-  return {
-    teamMembers,
-    projects: reconciledProjects,
-    tasks: reconciledTasks,
-  };
-};
-
-const getWorkspaceSnapshot = (workspacesById, workspaceId) => {
-  if (!workspaceId || !workspacesById[workspaceId]) {
-    return createEmptyWorkspace();
-  }
-
-  return sanitizeWorkspace(workspacesById[workspaceId]);
-};
-
-function sanitizeStorageData(data) {
-  if (!data || typeof data !== "object") {
-    return null;
-  }
-
-  const user = sanitizeUser(data.user);
-  let workspacesById = {};
-
-  if (data.workspacesById && typeof data.workspacesById === "object") {
-    Object.entries(data.workspacesById).forEach(([workspaceId, workspaceValue]) => {
-      if (!workspaceId) {
-        return;
-      }
-
-      workspacesById[workspaceId] = sanitizeWorkspace(workspaceValue);
-    });
-  } else {
-    const legacyWorkspaceId = (
-      user.role === TEAM_MEMBER_ROLES.ADMIN && user.email
-        ? getWorkspaceIdFromAdminEmail(user.email)
-        : "workspace:legacy"
-    );
-
-    workspacesById = {
-      [legacyWorkspaceId]: sanitizeWorkspace({
-        teamMembers: data.teamMembers,
-        projects: data.projects,
-        tasks: data.tasks,
-      }),
-    };
-  }
-
-  let activeWorkspaceId = typeof data.activeWorkspaceId === "string"
-    ? data.activeWorkspaceId.trim()
-    : "";
-
-  if (!activeWorkspaceId || !workspacesById[activeWorkspaceId]) {
-    if (user.role === TEAM_MEMBER_ROLES.ADMIN && user.email) {
-      const adminWorkspaceId = getWorkspaceIdFromAdminEmail(user.email);
-      activeWorkspaceId = workspacesById[adminWorkspaceId]
-        ? adminWorkspaceId
-        : Object.keys(workspacesById)[0] || "";
-    } else {
-      activeWorkspaceId = Object.keys(workspacesById)[0] || "";
-    }
-  }
-
-  if (user.role === TEAM_MEMBER_ROLES.ADMIN && user.email) {
-    const adminWorkspaceId = getWorkspaceIdFromAdminEmail(user.email);
-    const currentWorkspace = workspacesById[adminWorkspaceId] || createEmptyWorkspace();
-    const adminEmailLower = user.email.trim().toLowerCase();
-    const nextTeamMembers = [
-      {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        password: user.password || "",
-        role: TEAM_MEMBER_ROLES.ADMIN,
-      },
-      ...currentWorkspace.teamMembers.filter(
-        (member) => member.email.trim().toLowerCase() !== adminEmailLower,
-      ),
-    ];
-
-    workspacesById = {
-      ...workspacesById,
-      [adminWorkspaceId]: {
-        ...currentWorkspace,
-        teamMembers: nextTeamMembers,
-      },
-    };
-
-    activeWorkspaceId = activeWorkspaceId || adminWorkspaceId;
-  }
-
-  return {
-    user,
-    activeWorkspaceId,
-    workspacesById,
-  };
-}
-
-const getInitialState = () => {
-  if (typeof window === "undefined") {
-    return defaultState;
-  }
-
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-
-    if (!raw) {
-      return defaultState;
-    }
-
-    const parsed = JSON.parse(raw);
-    const sanitized = sanitizeStorageData(parsed);
-
-    if (!sanitized) {
-      return defaultState;
-    }
-
-    return sanitized;
-  } catch {
-    return defaultState;
-  }
+const extractApiMessage = (error, fallbackMessage) => {
+  const apiMessage = error?.response?.data?.message;
+  return typeof apiMessage === "string" && apiMessage.trim() ? apiMessage : fallbackMessage;
 };
 
 function AppProvider({ children }) {
-  const [initialState] = useState(getInitialState);
-  const [user, setUserState] = useState(initialState.user);
-  const [activeWorkspaceId, setActiveWorkspaceId] = useState(initialState.activeWorkspaceId || "");
-  const [workspacesById, setWorkspacesById] = useState(initialState.workspacesById || {});
+  const [user, setUserState] = useState(defaultUser);
+  const [token, setTokenState] = useState(null);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [isBootstrapping, setIsBootstrapping] = useState(true);
   const { addToast } = useToast();
 
-  const workspaceSnapshot = useMemo(
-    () => getWorkspaceSnapshot(workspacesById, activeWorkspaceId),
-    [activeWorkspaceId, workspacesById],
-  );
-  const teamMembers = workspaceSnapshot.teamMembers;
-  const projects = workspaceSnapshot.projects;
-  const tasks = workspaceSnapshot.tasks;
-
-  const isAdmin = useMemo(
-    () => user?.role === TEAM_MEMBER_ROLES.ADMIN,
-    [user?.role],
-  );
+  const isAdmin = useMemo(() => user?.role === TEAM_MEMBER_ROLES.ADMIN, [user?.role]);
 
   const showAccessDenied = (message) => {
     if (message) {
@@ -434,170 +259,148 @@ function AppProvider({ children }) {
     }
   };
 
-  const updateCurrentWorkspace = useCallback((updater) => {
-    if (!activeWorkspaceId) {
-      return;
+  const resetAppState = () => {
+    setUserState(defaultUser);
+    setTokenState(null);
+    setTeamMembers([]);
+    setProjects([]);
+    setTasks([]);
+  };
+
+  const hydrateDomainData = async (currentUser) => {
+    const [projectsData, tasksData] = await Promise.all([
+      getProjectsService(),
+      getTasksService(),
+    ]);
+
+    let membersData = [];
+    if (currentUser.role === TEAM_MEMBER_ROLES.ADMIN) {
+      try {
+        membersData = await getTeamMembersService();
+      } catch {
+        membersData = [];
+      }
     }
 
-    setWorkspacesById((prevWorkspaces) => {
-      const currentWorkspace = sanitizeWorkspace(
-        prevWorkspaces[activeWorkspaceId] || createEmptyWorkspace(),
-      );
-      const nextWorkspace = updater(currentWorkspace);
+    const safeUser = sanitizeUser(currentUser);
+    const safeMembers = sanitizeTeamMembers(membersData);
+    const withCurrentUser = [
+      safeUser,
+      ...safeMembers.filter((member) => toIdKey(member.id) !== toIdKey(safeUser.id)),
+    ];
 
-      return {
-        ...prevWorkspaces,
-        [activeWorkspaceId]: sanitizeWorkspace(nextWorkspace),
-      };
-    });
-  }, [activeWorkspaceId]);
-
-  const setTeamMembers = useCallback((nextTeamMembers) => {
-    updateCurrentWorkspace((workspace) => {
-      const prevTeamMembers = workspace.teamMembers || [];
-      const resolvedTeamMembers = typeof nextTeamMembers === "function"
-        ? nextTeamMembers(prevTeamMembers)
-        : nextTeamMembers;
-
-      return {
-        ...workspace,
-        teamMembers: sanitizeTeamMembers(resolvedTeamMembers),
-      };
-    });
-  }, [updateCurrentWorkspace]);
-
-  const setProjects = useCallback((nextProjects) => {
-    updateCurrentWorkspace((workspace) => {
-      const prevProjects = workspace.projects || [];
-      const resolvedProjects = typeof nextProjects === "function"
-        ? nextProjects(prevProjects)
-        : nextProjects;
-
-      return {
-        ...workspace,
-        projects: sanitizeProjects(resolvedProjects),
-      };
-    });
-  }, [updateCurrentWorkspace]);
-
-  const setTasks = useCallback((nextTasks) => {
-    updateCurrentWorkspace((workspace) => {
-      const prevTasks = workspace.tasks || [];
-      const resolvedTasks = typeof nextTasks === "function"
-        ? nextTasks(prevTasks)
-        : nextTasks;
-
-      return {
-        ...workspace,
-        tasks: sanitizeTasks(resolvedTasks),
-      };
-    });
-  }, [updateCurrentWorkspace]);
+    setTeamMembers(withCurrentUser);
+    setProjects(sanitizeProjects(projectsData));
+    setTasks(sanitizeTasks(tasksData));
+  };
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
+    let isMounted = true;
 
-    try {
-      window.localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-          user,
-          activeWorkspaceId,
-          workspacesById,
-        }),
-      );
-    } catch {
-      // Ignore persistence failures (e.g. quota/privacy mode); app continues in memory.
-    }
-  }, [activeWorkspaceId, user, workspacesById]);
+    const bootstrap = async () => {
+      clearLegacyPersistence();
+      const storedToken = getToken();
+      if (!storedToken) {
+        if (isMounted) {
+          setIsBootstrapping(false);
+        }
+        return;
+      }
 
-  const registerAdminAccount = (adminData) => {
+      try {
+        saveToken(storedToken);
+        const me = await getCurrentUser();
+        const safeUser = sanitizeUser(me);
+        if (!safeUser.role) {
+          throw new Error("Invalid user session");
+        }
+
+        if (!isMounted) {
+          return;
+        }
+
+        setTokenState(storedToken);
+        setUserState(safeUser);
+        await hydrateDomainData(safeUser);
+      } catch {
+        clearToken();
+        if (isMounted) {
+          resetAppState();
+        }
+      } finally {
+        if (isMounted) {
+          setIsBootstrapping(false);
+        }
+      }
+    };
+
+    bootstrap();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const registerAdminAccount = async (adminData) => {
     const name = typeof adminData?.name === "string" ? adminData.name.trim() : "";
-    const email = typeof adminData?.email === "string" ? adminData.email.trim() : "";
+    const email = typeof adminData?.email === "string" ? adminData.email.trim().toLowerCase() : "";
     const password = typeof adminData?.password === "string" ? adminData.password : "";
 
     if (!name || !email || !password) {
       return null;
     }
 
-    const workspaceId = getWorkspaceIdFromAdminEmail(email);
-    const currentWorkspace = workspacesById[workspaceId] || createEmptyWorkspace();
-    const emailLower = email.toLowerCase();
-    const adminUser = {
-      id: Date.now(),
-      name,
-      email,
-      password,
-      role: TEAM_MEMBER_ROLES.ADMIN,
-    };
-    const nextWorkspace = {
-      ...currentWorkspace,
-      teamMembers: [
-        adminUser,
-        ...currentWorkspace.teamMembers.filter(
-          (member) => member.email.trim().toLowerCase() !== emailLower,
-        ),
-      ],
-    };
+    try {
+      const result = await registerAdminService({ name, email, password });
+      if (!result?.token || !result?.user) {
+        return null;
+      }
 
-    setWorkspacesById((prevWorkspaces) => ({
-      ...prevWorkspaces,
-      [workspaceId]: nextWorkspace,
-    }));
-    setActiveWorkspaceId(workspaceId);
-    setUserState(adminUser);
-
-    return adminUser;
+      const safeUser = sanitizeUser(result.user);
+      saveToken(result.token);
+      setTokenState(result.token);
+      setUserState(safeUser);
+      await hydrateDomainData(safeUser);
+      return safeUser;
+    } catch (error) {
+      addToast(extractApiMessage(error, "Could not create account. Try again."), "error");
+      return null;
+    }
   };
 
-  const authenticateUser = (emailValue, passwordValue) => {
-    const normalizedEmail = String(emailValue || "").trim().toLowerCase();
+  const authenticateUser = async (emailValue, passwordValue) => {
+    const email = String(emailValue || "").trim().toLowerCase();
     const password = String(passwordValue || "");
 
-    if (!normalizedEmail || !password) {
+    if (!email || !password) {
       return null;
     }
 
-    for (const [workspaceId, workspace] of Object.entries(workspacesById)) {
-      const members = sanitizeTeamMembers(workspace.teamMembers);
-      const matchedUser = members.find(
-        (member) =>
-          member.email.trim().toLowerCase() === normalizedEmail &&
-          String(member.password || "") === password,
-      );
-
-      if (!matchedUser) {
-        continue;
+    try {
+      const result = await loginService({ email, password });
+      if (!result?.token || !result?.user) {
+        return null;
       }
 
-      const role = matchedUser.role === TEAM_MEMBER_ROLES.ADMIN
-        ? TEAM_MEMBER_ROLES.ADMIN
-        : TEAM_MEMBER_ROLES.MEMBER;
-      const nextUser = {
-        id: matchedUser.id,
-        name: matchedUser.name,
-        email: matchedUser.email,
-        password: matchedUser.password || "",
-        role,
-      };
-
-      setActiveWorkspaceId(workspaceId);
-      setUserState(nextUser);
-
-      return nextUser;
+      const safeUser = sanitizeUser(result.user);
+      saveToken(result.token);
+      setTokenState(result.token);
+      setUserState(safeUser);
+      await hydrateDomainData(safeUser);
+      return safeUser;
+    } catch (error) {
+      addToast(extractApiMessage(error, "Invalid email or password."), "error");
+      return null;
     }
-
-    return null;
   };
 
-  const logout = () => {
-    setUserState(defaultUser);
-    setActiveWorkspaceId("");
+  const logout = async () => {
+    clearToken();
+    resetAppState();
+    return true;
   };
 
-  const updateCurrentUserProfile = (profileData) => {
+  const updateCurrentUserProfile = async (profileData) => {
     const currentUser = sanitizeUser(user);
     if (!currentUser.role) {
       showAccessDenied("You must be logged in to update your profile");
@@ -611,374 +414,242 @@ function AppProvider({ children }) {
       return null;
     }
 
-    const normalizedEmail = email.toLowerCase();
-    const duplicateEmail = teamMembers.some(
-      (member) =>
-        toIdKey(member.id) !== toIdKey(currentUser.id) &&
-        member.email.trim().toLowerCase() === normalizedEmail,
-    );
-    if (duplicateEmail) {
-      addToast("This email is already used in your workspace", "error");
-      return null;
-    }
-
     const nextUser = {
       ...currentUser,
       name,
       email,
     };
 
-    if (activeWorkspaceId) {
-      const shouldMoveWorkspace = (
-        currentUser.role === TEAM_MEMBER_ROLES.ADMIN &&
-        currentUser.email.trim().toLowerCase() !== normalizedEmail
-      );
-      const nextWorkspaceId = shouldMoveWorkspace
-        ? getWorkspaceIdFromAdminEmail(email)
-        : activeWorkspaceId;
-
-      setWorkspacesById((prevWorkspaces) => {
-        const currentWorkspace = sanitizeWorkspace(
-          prevWorkspaces[activeWorkspaceId] || createEmptyWorkspace(),
-        );
-        const hasTargetMember = currentWorkspace.teamMembers.some(
-          (member) => toIdKey(member.id) === toIdKey(currentUser.id),
-        );
-        const updatedTeamMembers = (hasTargetMember
-          ? currentWorkspace.teamMembers.map((member) =>
-              toIdKey(member.id) === toIdKey(currentUser.id)
-                ? { ...member, name, email }
-                : member
-            )
-          : [
-              ...currentWorkspace.teamMembers,
-              {
-                id: currentUser.id,
-                name,
-                email,
-                password: currentUser.password || "",
-                role: currentUser.role,
-              },
-            ]);
-        const updatedWorkspace = {
-          ...currentWorkspace,
-          teamMembers: updatedTeamMembers,
-        };
-        const nextWorkspaces = { ...prevWorkspaces };
-
-        if (shouldMoveWorkspace) {
-          delete nextWorkspaces[activeWorkspaceId];
-        }
-
-        nextWorkspaces[nextWorkspaceId] = updatedWorkspace;
-        return nextWorkspaces;
-      });
-
-      if (shouldMoveWorkspace) {
-        setActiveWorkspaceId(nextWorkspaceId);
-      }
-    }
-
     setUserState(nextUser);
+    setTeamMembers((prevMembers) =>
+      prevMembers.map((member) =>
+        toIdKey(member.id) === toIdKey(currentUser.id)
+          ? { ...member, name, email }
+          : member,
+      ),
+    );
+
     addToast("Profile updated successfully", "success");
     return nextUser;
   };
 
-  const addProject = (project) => {
+  const addProject = async (project) => {
     if (!isAdmin) {
       showAccessDenied("Only admins can create projects");
       return null;
     }
 
-    const titleSource = typeof project?.title === "string" && project.title.trim()
-      ? project.title
-      : project?.name;
+    const titleSource = typeof project?.title === "string" && project.title.trim() ? project.title : project?.name;
     const title = typeof titleSource === "string" ? titleSource.trim() : "";
-
     if (!title) {
       showAccessDenied("Project name is required");
       return null;
     }
 
-    const rawMemberIds = Array.isArray(project.memberIds)
-      ? project.memberIds.filter((memberId) => typeof memberId === "string" || typeof memberId === "number")
-      : [];
-    const dedupedMemberIds = [];
-    const seenMemberIds = new Set();
-    rawMemberIds.forEach((memberId) => {
-      const key = `${typeof memberId}:${memberId}`;
-      if (seenMemberIds.has(key)) {
-        return;
+    try {
+      const createdProject = await addProjectService({
+        title,
+        description: typeof project?.description === "string" ? project.description : "",
+        memberIds: Array.isArray(project?.memberIds) ? project.memberIds : [],
+      });
+
+      if (!createdProject) {
+        return null;
       }
-      seenMemberIds.add(key);
-      dedupedMemberIds.push(memberId);
-    });
 
-    if (user?.id && !dedupedMemberIds.some((memberId) => toIdKey(memberId) === toIdKey(user.id))) {
-      dedupedMemberIds.push(user.id);
+      const safeProject = sanitizeProjects([createdProject])[0];
+      setProjects((prev) => [safeProject, ...prev.filter((item) => toIdKey(item.id) !== toIdKey(safeProject.id))]);
+      return safeProject;
+    } catch (error) {
+      showAccessDenied(extractApiMessage(error, "Failed to create project"));
+      return null;
     }
-
-    const newProject = {
-      id: Date.now(),
-      createdAt: new Date(),
-      ...project,
-      title,
-      name: project.name || title,
-      description: typeof project.description === "string" ? project.description : "",
-      memberIds: dedupedMemberIds,
-    };
-
-    setProjects((prev) => [newProject, ...prev]);
-
-    return newProject;
   };
 
-  const addTask = (task) => {
+  const addTask = async (task) => {
     if (!isAdmin) {
       showAccessDenied("Only admins can create tasks");
       return null;
     }
-    if (!task.projectId) {
+
+    if (!task?.projectId) {
       showAccessDenied("Task must include a project");
       return null;
     }
 
-    const project = projects.find(
-      (projectValue) => toIdKey(projectValue.id) === toIdKey(task.projectId),
-    );
+    try {
+      const createdTask = await addTaskService({
+        ...task,
+        title: String(task.title || "").trim(),
+        status: normalizeTaskStatus(task.status),
+        subtasks: normalizeSubtasksArray(task.subtasks || []),
+      });
 
-    if (!project) {
-      showAccessDenied("Task project does not exist");
+      if (!createdTask) {
+        return null;
+      }
+
+      const safeTask = sanitizeTasks([createdTask])[0];
+      setTasks((prev) => [safeTask, ...prev.filter((item) => toIdKey(item.id) !== toIdKey(safeTask.id))]);
+      return safeTask;
+    } catch (error) {
+      showAccessDenied(extractApiMessage(error, "Failed to create task"));
       return null;
     }
-    const teamMemberIdSet = new Set(teamMembers.map((member) => toIdKey(member.id)));
-    const normalizedAssigneeId = teamMemberIdSet.has(toIdKey(task.assigneeId))
-      ? task.assigneeId
-      : null;
-    const isAssigneeInProject = !normalizedAssigneeId || !Array.isArray(project.memberIds)
-      ? true
-      : project.memberIds.some((memberId) => toIdKey(memberId) === toIdKey(normalizedAssigneeId));
-
-    if (!isAssigneeInProject) {
-      showAccessDenied("Task assignee must be part of the selected project");
-      return null;
-    }
-
-    const nextTask = {
-      id: Date.now(),
-      createdAt: new Date(),
-      status: "Todo",
-      priority: "Medium",
-      ...task,
-      assigneeId: normalizedAssigneeId,
-      subtasks: normalizeSubtasksArray(task.subtasks || []).map((subtask) => ({
-        ...subtask,
-        assigneeId: teamMemberIdSet.has(toIdKey(subtask.assigneeId)) ? subtask.assigneeId : null,
-      })),
-    };
-    const newTask = {
-      ...nextTask,
-      status: normalizeTaskStatus(nextTask.status),
-      completedAt: resolveTaskCompletionDate(nextTask),
-    };
-
-    setTasks((prev) => [newTask, ...prev]);
-
-    return newTask;
   };
 
-  const addTeamMember = (member) => {
+  const addTeamMember = async (member) => {
     if (!isAdmin) {
       showAccessDenied("Only admins can add team members");
       return null;
     }
 
-    const normalizedEmail = String(member?.email || "").trim().toLowerCase();
-    const duplicateEmail = teamMembers.some(
-      (teamMember) => teamMember.email.trim().toLowerCase() === normalizedEmail,
-    );
+    try {
+      const createdMember = await addTeamMemberService(member);
+      if (!createdMember) {
+        return null;
+      }
 
-    if (duplicateEmail) {
-      showAccessDenied("A member with this email already exists");
+      const safeMember = sanitizeTeamMembers([createdMember])[0];
+      setTeamMembers((prev) => [...prev, safeMember]);
+      return safeMember;
+    } catch (error) {
+      showAccessDenied(extractApiMessage(error, "Failed to add member"));
       return null;
     }
-
-    const newMember = {
-      id: Date.now(),
-      ...member,
-      role: TEAM_MEMBER_ROLES.MEMBER,
-    };
-
-    setTeamMembers((prev) => [...prev, newMember]);
-
-    return newMember;
   };
 
-  const updateTaskStatus = (taskId, newStatus) => {
-    const matchingTask = tasks.find(
-      (task) => toIdKey(task.id) === toIdKey(taskId),
-    );
+  const updateTaskStatus = async (taskId, newStatus) => {
+    const matchingTask = tasks.find((task) => toIdKey(task.id) === toIdKey(taskId));
     if (!matchingTask) {
-      return;
+      return false;
     }
 
-    const isMemberAssigned = (
-      user?.role === TEAM_MEMBER_ROLES.MEMBER &&
-      String(matchingTask.assigneeId || "") === String(user?.id || "")
-    );
+    const isMemberAssigned = user?.role === TEAM_MEMBER_ROLES.MEMBER &&
+      String(matchingTask.assigneeId || "") === String(user?.id || "");
 
     if (!isAdmin && !isMemberAssigned) {
       showAccessDenied("You do not have permission to update this task");
-      return;
+      return false;
     }
 
-    setTasks((prev) =>
-      prev.map((task) => {
-        if (toIdKey(task.id) !== toIdKey(taskId)) {
-          return task;
-        }
+    try {
+      const updatedTask = await updateTaskStatusService(taskId, normalizeTaskStatus(newStatus));
+      if (!updatedTask) {
+        return false;
+      }
 
-        const normalizedStatus = normalizeTaskStatus(newStatus);
-        const nextTask = {
-          ...task,
-          status: normalizedStatus,
-          updatedAt: new Date(),
-        };
-        nextTask.completedAt = normalizedStatus === "Completed"
-          ? task.completedAt || new Date()
-          : null;
-
-        return nextTask;
-      }),
-    );
+      const safeTask = sanitizeTasks([updatedTask])[0];
+      setTasks((prev) =>
+        prev.map((task) => (toIdKey(task.id) === toIdKey(taskId) ? safeTask : task)),
+      );
+      return true;
+    } catch (error) {
+      showAccessDenied(extractApiMessage(error, "Failed to update task status"));
+      return false;
+    }
   };
 
-  const deleteTask = (taskId) => {
+  const deleteTask = async (taskId) => {
     if (!isAdmin) {
       showAccessDenied("Only admins can delete tasks");
-      return;
+      return false;
     }
 
-    setTasks((prev) =>
-      prev.filter((task) => toIdKey(task.id) !== toIdKey(taskId)),
-    );
+    try {
+      await deleteTaskService(taskId);
+      setTasks((prev) => prev.filter((task) => toIdKey(task.id) !== toIdKey(taskId)));
+      return true;
+    } catch (error) {
+      showAccessDenied(extractApiMessage(error, "Failed to delete task"));
+      return false;
+    }
   };
 
-  const deleteProject = (projectId) => {
+  const deleteProject = async (projectId) => {
     if (!isAdmin) {
       showAccessDenied("Only admins can delete projects");
-      return;
+      return false;
     }
 
-    setProjects((prev) =>
-      prev.filter((project) => toIdKey(project.id) !== toIdKey(projectId)),
-    );
-
-    setTasks((prev) =>
-      prev.filter((task) => toIdKey(task.projectId) !== toIdKey(projectId)),
-    );
+    try {
+      await deleteProjectService(projectId);
+      setProjects((prev) => prev.filter((project) => toIdKey(project.id) !== toIdKey(projectId)));
+      setTasks((prev) => prev.filter((task) => toIdKey(task.projectId) !== toIdKey(projectId)));
+      return true;
+    } catch (error) {
+      showAccessDenied(extractApiMessage(error, "Failed to delete project"));
+      return false;
+    }
   };
 
-  const updateTask = (taskId, updatedData) => {
+  const updateTask = async (taskId, updatedData) => {
     if (!isAdmin) {
       showAccessDenied("Only admins can edit tasks");
-      return;
+      return false;
     }
 
-    if (Object.prototype.hasOwnProperty.call(updatedData, "projectId")) {
-      const nextProjectId = updatedData.projectId;
-      const projectExists = projects.some(
-        (project) => toIdKey(project.id) === toIdKey(nextProjectId),
-      );
-      if (!projectExists) {
-        showAccessDenied("Task project does not exist");
-        return;
+    try {
+      const updatedTask = await updateTaskService(taskId, updatedData);
+      if (!updatedTask) {
+        return false;
       }
+
+      const safeTask = sanitizeTasks([updatedTask])[0];
+      setTasks((prev) =>
+        prev.map((task) => (toIdKey(task.id) === toIdKey(taskId) ? safeTask : task)),
+      );
+      return true;
+    } catch (error) {
+      showAccessDenied(extractApiMessage(error, "Failed to update task"));
+      return false;
     }
-
-    setTasks((prev) =>
-      prev.map((task) => {
-        if (toIdKey(task.id) !== toIdKey(taskId)) {
-          return task;
-        }
-
-        const teamMemberIdSet = new Set(teamMembers.map((member) => toIdKey(member.id)));
-        const normalizedSubtasks = Object.prototype.hasOwnProperty.call(updatedData, "subtasks")
-          ? normalizeSubtasksArray(updatedData.subtasks).map((subtask) => ({
-              ...subtask,
-              assigneeId: teamMemberIdSet.has(toIdKey(subtask.assigneeId)) ? subtask.assigneeId : null,
-            }))
-          : normalizeSubtasksArray(task.subtasks);
-        const nextTask = {
-          ...task,
-          ...updatedData,
-          subtasks: normalizedSubtasks,
-          assigneeId: teamMemberIdSet.has(toIdKey(updatedData.assigneeId))
-            ? updatedData.assigneeId
-            : Object.prototype.hasOwnProperty.call(updatedData, "assigneeId")
-              ? null
-              : task.assigneeId,
-          updatedAt: new Date(),
-        };
-        const normalizedStatus = Object.prototype.hasOwnProperty.call(updatedData, "status")
-          ? normalizeTaskStatus(updatedData.status)
-          : normalizeTaskStatus(task.status);
-
-        nextTask.status = normalizedStatus;
-        nextTask.completedAt = normalizedStatus === "Completed"
-          ? task.completedAt || new Date()
-          : null;
-
-        return nextTask;
-      }),
-    );
   };
 
-  const removeTeamMember = (memberId) => {
+  const removeTeamMember = async (memberId) => {
     if (!isAdmin) {
       showAccessDenied("Only admins can remove team members");
-      return;
+      return false;
     }
 
-    const memberToRemove = teamMembers.find(
-      (member) => toIdKey(member.id) === toIdKey(memberId),
-    );
-
+    const memberToRemove = teamMembers.find((member) => toIdKey(member.id) === toIdKey(memberId));
     if (memberToRemove?.role === TEAM_MEMBER_ROLES.ADMIN) {
-      showAccessDenied("Admin account cannot be removed from this workspace");
-      return;
+      showAccessDenied("Admin account cannot be removed");
+      return false;
     }
 
-    setTeamMembers((prev) =>
-      prev.filter((member) => toIdKey(member.id) !== toIdKey(memberId)),
-    );
-
-    setProjects((prev) =>
-      prev.map((project) => ({
-        ...project,
-        memberIds: Array.isArray(project.memberIds)
-          ? project.memberIds.filter((id) => toIdKey(id) !== toIdKey(memberId))
-          : [],
-      })),
-    );
-
-    setTasks((prev) =>
-      prev.map((task) => ({
-        ...task,
-        assigneeId: toIdKey(task.assigneeId) === toIdKey(memberId) ? null : task.assigneeId,
-        subtasks: normalizeSubtasksArray(task.subtasks).map((subtask) => ({
-          ...subtask,
-          assigneeId: toIdKey(subtask.assigneeId) === toIdKey(memberId)
-            ? null
-            : subtask.assigneeId,
+    try {
+      await removeTeamMemberService(memberId);
+      setTeamMembers((prev) => prev.filter((member) => toIdKey(member.id) !== toIdKey(memberId)));
+      setProjects((prev) =>
+        prev.map((project) => ({
+          ...project,
+          memberIds: Array.isArray(project.memberIds)
+            ? project.memberIds.filter((id) => toIdKey(id) !== toIdKey(memberId))
+            : [],
         })),
-      })),
-    );
+      );
+      setTasks((prev) =>
+        prev.map((task) => ({
+          ...task,
+          assigneeId: toIdKey(task.assigneeId) === toIdKey(memberId) ? null : task.assigneeId,
+          subtasks: normalizeSubtasksArray(task.subtasks).map((subtask) => ({
+            ...subtask,
+            assigneeId: toIdKey(subtask.assigneeId) === toIdKey(memberId) ? null : subtask.assigneeId,
+          })),
+        })),
+      );
+      return true;
+    } catch (error) {
+      showAccessDenied(extractApiMessage(error, "Failed to remove member"));
+      return false;
+    }
   };
 
   const value = {
     user,
-    activeWorkspaceId,
+    token,
+    isBootstrapping,
     authenticateUser,
     registerAdminAccount,
     updateCurrentUserProfile,

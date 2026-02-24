@@ -49,9 +49,7 @@ function ProjectDetails() {
   const handleCreateTask = async (task) => {
     return runAsync(
       async () => {
-        await new Promise((resolve) => setTimeout(resolve, 700));
-
-        const createdTask = addTask({
+        const createdTask = await addTask({
           ...task,
           projectId: pid
         });
@@ -70,19 +68,15 @@ function ProjectDetails() {
   /* ---------- Update Status ---------- */
 
   const handleStatusChange =
-    (taskId, newStatus) => {
-
-      updateTaskStatus(taskId, newStatus);
-
+    async (taskId, newStatus) => {
+      await updateTaskStatus(taskId, newStatus);
     };
 
 
   /* ---------- Delete Task ---------- */
 
-  const handleDeleteTask = (taskId) => {
-
-    deleteTask(taskId);
-
+  const handleDeleteTask = async (taskId) => {
+    await deleteTask(taskId);
   };
 
 

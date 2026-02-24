@@ -24,7 +24,7 @@ function Signup() {
     }));
   };
 
-  const handleSignup = (event) => {
+  const handleSignup = async (event) => {
     event.preventDefault();
     setError("");
 
@@ -43,7 +43,7 @@ function Signup() {
       return;
     }
 
-    const adminUser = registerAdminAccount({ name, email, password });
+    const adminUser = await registerAdminAccount({ name, email, password });
 
     if (!adminUser) {
       setError("Could not create account. Try again.");

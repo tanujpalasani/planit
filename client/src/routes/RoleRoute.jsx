@@ -4,8 +4,13 @@ import { useAppContext } from "../context/useAppContext";
 const VALID_ROLES = new Set(["Admin", "Member"]);
 
 function RoleRoute({ role }) {
-  const { user } = useAppContext();
+  const { user, isBootstrapping } = useAppContext();
   const location = useLocation();
+
+  if (isBootstrapping) {
+    return null;
+  }
+
   const isAuthenticated = Boolean(
     user &&
     (typeof user.id === "string" || typeof user.id === "number") &&

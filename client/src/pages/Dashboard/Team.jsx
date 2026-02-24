@@ -23,8 +23,7 @@ function Team() {
   const handleAddMember = async (newMember) => {
     return runAsync(
       async () => {
-        await new Promise((resolve) => setTimeout(resolve, 700));
-        const createdMember = addTeamMember(newMember);
+        const createdMember = await addTeamMember(newMember);
         if (!createdMember) {
           throw new Error("Failed to add member");
         }
@@ -35,8 +34,8 @@ function Team() {
     );
   };
 
-  const handleDeleteMember = (memberId) => {
-    removeTeamMember(memberId);
+  const handleDeleteMember = async (memberId) => {
+    await removeTeamMember(memberId);
   };
 
   return (

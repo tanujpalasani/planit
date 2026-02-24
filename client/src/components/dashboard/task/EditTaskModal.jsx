@@ -75,7 +75,7 @@ function EditTaskModal({ isOpen, onClose, task }) {
     );
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
 
@@ -89,7 +89,7 @@ function EditTaskModal({ isOpen, onClose, task }) {
       return;
     }
 
-    updateTask(task.id, {
+    const isUpdated = await updateTask(task.id, {
       title: title.trim(),
       status,
       priority,
@@ -97,6 +97,11 @@ function EditTaskModal({ isOpen, onClose, task }) {
       assigneeId: assigneeId || null,
       subtasks,
     });
+
+    if (!isUpdated) {
+      setError("Task update failed.");
+      return;
+    }
 
     onClose();
   };

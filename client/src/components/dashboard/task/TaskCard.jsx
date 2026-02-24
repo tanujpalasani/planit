@@ -129,7 +129,7 @@ function TaskCard({
           : subtask
     );
 
-    updateTask(task.id, { subtasks: updatedSubtasks });
+    void updateTask(task.id, { subtasks: updatedSubtasks });
   };
 
 
@@ -141,7 +141,7 @@ function TaskCard({
         (_, i) => i !== index
       );
 
-    updateTask(task.id, { subtasks: updatedSubtasks });
+    void updateTask(task.id, { subtasks: updatedSubtasks });
   };
 
   const handleUpdateSubtask = (subtaskId, updatedTitle, index) => {
@@ -166,7 +166,7 @@ function TaskCard({
       };
     });
 
-    updateTask(task.id, { subtasks: updatedSubtasks });
+    void updateTask(task.id, { subtasks: updatedSubtasks });
   };
 
   const handleSubtaskDragStart = (index) => {
@@ -198,7 +198,7 @@ function TaskCard({
     const [draggedSubtask] = reorderedSubtasks.splice(draggedIndex, 1);
     reorderedSubtasks.splice(targetIndex, 0, draggedSubtask);
 
-    updateTask(task.id, { subtasks: reorderedSubtasks });
+    void updateTask(task.id, { subtasks: reorderedSubtasks });
     setDraggedIndex(null);
     setDropTargetIndex(null);
   };
@@ -226,7 +226,7 @@ function TaskCard({
 
   const handleStatusChange = (event) => {
     const nextStatus = event.target.value;
-    onStatusChange(task.id, nextStatus);
+    void onStatusChange(task.id, nextStatus);
     addToast(`Task moved to ${formatStatusLabel(nextStatus)}`, "info");
   };
 
@@ -235,8 +235,8 @@ function TaskCard({
     setIsConfirmOpen(true);
   };
 
-  const handleConfirmDelete = () => {
-    onDelete(task.id);
+  const handleConfirmDelete = async () => {
+    await onDelete(task.id);
     addToast("Task deleted successfully", "success");
     setIsConfirmOpen(false);
   };

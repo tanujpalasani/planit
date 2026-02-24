@@ -22,7 +22,7 @@ function Login() {
     }));
   };
 
-  const handleLogin = (event) => {
+  const handleLogin = async (event) => {
     event.preventDefault();
     const email = formData.email.trim().toLowerCase();
     const password = formData.password;
@@ -33,7 +33,7 @@ function Login() {
       return;
     }
 
-    const authenticatedUser = authenticateUser(email, password);
+    const authenticatedUser = await authenticateUser(email, password);
 
     if (!authenticatedUser) {
       setError("Invalid email or password.");

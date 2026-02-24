@@ -23,7 +23,12 @@ import { useAppContext } from "../context/useAppContext";
 
 
 function AppRouter() {
-  const { user } = useAppContext();
+  const { user, isBootstrapping } = useAppContext();
+
+  if (isBootstrapping) {
+    return null;
+  }
+
   const isValidRole = user?.role === "Admin" || user?.role === "Member";
   const dashboardRedirect = user?.role === "Member"
     ? "/member"
