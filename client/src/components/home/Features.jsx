@@ -75,13 +75,13 @@ function Features() {
           gap-8
         ">
 
-          {features.map((feature, index) => {
+          {features.map((feature) => {
 
             const Icon = feature.icon;
 
             return (
               <div
-                key={index}
+                key={feature.title}
                 className="
                   group
 

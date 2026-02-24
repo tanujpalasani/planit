@@ -29,7 +29,6 @@ function Projects() {
           name: data.name,
           description: data.description,
           tasksCount: 0,
-          membersCount: 1,
           status: "In Progress",
           color: "from-purple-500 to-pink-500",
         });
@@ -47,8 +46,7 @@ function Projects() {
 
   /* ---------------- Navigate to Project ---------------- */
   const handleOpenProject = (project) => {
-    const basePath = isAdmin ? "/admin" : "/member";
-    navigate(`${basePath}/projects/${project.id}`);
+    navigate(`/admin/projects/${project.id}`);
   };
 
 

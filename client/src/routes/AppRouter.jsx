@@ -24,6 +24,7 @@ import { useAppContext } from "../context/useAppContext";
 
 function AppRouter() {
   const { user } = useAppContext();
+  const isValidRole = user?.role === "Admin" || user?.role === "Member";
   const dashboardRedirect = user?.role === "Member"
     ? "/member"
     : user?.role === "Admin"
@@ -38,9 +39,15 @@ function AppRouter() {
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
 
-        <Route path="/login" element={<Login />} />
+        <Route
+          path="/login"
+          element={isValidRole ? <Navigate to={dashboardRedirect} replace /> : <Login />}
+        />
 
-        <Route path="/signup" element={<Signup />} />
+        <Route
+          path="/signup"
+          element={isValidRole ? <Navigate to={dashboardRedirect} replace /> : <Signup />}
+        />
 
 
         {/* Admin Routes */}

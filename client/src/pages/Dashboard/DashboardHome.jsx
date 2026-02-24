@@ -52,7 +52,7 @@ function DashboardHome({ memberView = false }) {
     };
 
     const parseTaskCompletionDate = (task) => {
-      const value = task?.updatedAt || task?.createdAt;
+      const value = task?.completedAt || task?.updatedAt || task?.createdAt;
       if (!value) {
         return null;
       }
@@ -166,7 +166,9 @@ function DashboardHome({ memberView = false }) {
     const openTasks = scopedTasks.length - completedTasks;
 
     const overdueSubtasks = allSubtasks.filter((subtask) =>
-      Boolean(subtask?.dueDate) && isPastDate(subtask.dueDate)
+      !subtask?.completed &&
+      Boolean(subtask?.dueDate) &&
+      isPastDate(subtask.dueDate)
     ).length;
 
     return {
@@ -233,7 +235,7 @@ function DashboardHome({ memberView = false }) {
       <div>
 
         <h1 className="text-3xl font-bold">
-          {isMemberView ? "Your Task Overview" : `Welcome back, ${user.name}`}
+          {isMemberView ? "Your Task Overview" : `Welcome back, ${user?.name || "User"}`}
         </h1>
 
 
@@ -418,17 +420,20 @@ function DashboardHome({ memberView = false }) {
             {isMemberView ? "My Recent Tasks" : "Recent Tasks"}
           </h2>
 
-
-          {recentTasks.map(task => (
-
-            <TaskCard
-              key={task.id}
-              task={task}
-              onStatusChange={updateTaskStatus}
-              onDelete={deleteTask}
-            />
-
-          ))}
+          {recentTasks.length === 0 ? (
+            <p className="text-sm text-textSecondary">
+              No recent tasks available.
+            </p>
+          ) : (
+            recentTasks.map(task => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                onStatusChange={updateTaskStatus}
+                onDelete={deleteTask}
+              />
+            ))
+          )}
 
         </div>
 
@@ -451,42 +456,44 @@ function DashboardHome({ memberView = false }) {
 
 
           <div className="space-y-3">
+            {recentProjects.length === 0 ? (
+              <p className="text-sm text-textSecondary">
+                No recent projects available.
+              </p>
+            ) : (
+              recentProjects.map(project => (
+                <div
+                  key={project.id}
+                  className="
+                    flex justify-between
 
-            {recentProjects.map(project => (
+                    bg-white/5
 
-              <div
-                key={project.id}
-                className="
-                  flex justify-between
+                    px-4 py-3
 
-                  bg-white/5
+                    rounded-lg
 
-                  px-4 py-3
+                    hover:bg-white/10
 
-                  rounded-lg
+                    transition
+                  "
+                >
+                  <span>
+                    {project.name}
+                  </span>
 
-                  hover:bg-white/10
+                  <span className="text-textSecondary text-sm">
+                    {
+                      scopedTasks.filter(
+                        (task) =>
+                          String(task.projectId) === String(project.id)
+                      ).length
+                    } tasks
+                  </span>
 
-                  transition
-                "
-              >
-
-                <span>
-                  {project.name}
-                </span>
-
-                <span className="text-textSecondary text-sm">
-                  {
-                    scopedTasks.filter(
-                      (task) =>
-                        String(task.projectId) === String(project.id)
-                    ).length
-                  } tasks
-                </span>
-
-              </div>
-
-            ))}
+                </div>
+              ))
+            )}
 
           </div>
 

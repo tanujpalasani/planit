@@ -53,6 +53,19 @@ const normalizeTaskStatus = (statusValue) => {
   return "Todo";
 };
 
+const resolveTaskCompletionDate = (taskValue, fallbackDate = new Date()) => {
+  if (!taskValue || typeof taskValue !== "object") {
+    return null;
+  }
+
+  const normalizedStatus = normalizeTaskStatus(taskValue.status);
+  if (normalizedStatus !== "Completed") {
+    return null;
+  }
+
+  return taskValue.completedAt || taskValue.updatedAt || taskValue.createdAt || fallbackDate;
+};
+
 const normalizeTeamMemberRole = (roleValue) => {
   const role = typeof roleValue === "string" ? roleValue.trim() : "";
 
@@ -215,6 +228,8 @@ const sanitizeTasks = (tasks) => {
       const priority = typeof task.priority === "string" && task.priority.trim()
         ? task.priority
         : "Medium";
+      const status = normalizeTaskStatus(task.status);
+      const completedAt = resolveTaskCompletionDate(task, null);
 
       if (!title) {
         return null;
@@ -232,7 +247,8 @@ const sanitizeTasks = (tasks) => {
         ...task,
         id,
         title,
-        status: normalizeTaskStatus(task.status),
+        status,
+        completedAt,
         projectId,
         priority,
         subtasks: normalizeSubtasksArray(task.subtasks),
@@ -418,16 +434,6 @@ function AppProvider({ children }) {
     }
   };
 
-  const setUser = useCallback((nextUser) => {
-    setUserState((prevUser) => {
-      const resolvedUser = typeof nextUser === "function"
-        ? nextUser(prevUser)
-        : nextUser;
-
-      return sanitizeUser(resolvedUser);
-    });
-  }, []);
-
   const updateCurrentWorkspace = useCallback((updater) => {
     if (!activeWorkspaceId) {
       return;
@@ -591,6 +597,93 @@ function AppProvider({ children }) {
     setActiveWorkspaceId("");
   };
 
+  const updateCurrentUserProfile = (profileData) => {
+    const currentUser = sanitizeUser(user);
+    if (!currentUser.role) {
+      showAccessDenied("You must be logged in to update your profile");
+      return null;
+    }
+
+    const name = typeof profileData?.name === "string" ? profileData.name.trim() : "";
+    const email = typeof profileData?.email === "string" ? profileData.email.trim() : "";
+    if (!name || !email) {
+      addToast("Name and email are required", "error");
+      return null;
+    }
+
+    const normalizedEmail = email.toLowerCase();
+    const duplicateEmail = teamMembers.some(
+      (member) =>
+        toIdKey(member.id) !== toIdKey(currentUser.id) &&
+        member.email.trim().toLowerCase() === normalizedEmail,
+    );
+    if (duplicateEmail) {
+      addToast("This email is already used in your workspace", "error");
+      return null;
+    }
+
+    const nextUser = {
+      ...currentUser,
+      name,
+      email,
+    };
+
+    if (activeWorkspaceId) {
+      const shouldMoveWorkspace = (
+        currentUser.role === TEAM_MEMBER_ROLES.ADMIN &&
+        currentUser.email.trim().toLowerCase() !== normalizedEmail
+      );
+      const nextWorkspaceId = shouldMoveWorkspace
+        ? getWorkspaceIdFromAdminEmail(email)
+        : activeWorkspaceId;
+
+      setWorkspacesById((prevWorkspaces) => {
+        const currentWorkspace = sanitizeWorkspace(
+          prevWorkspaces[activeWorkspaceId] || createEmptyWorkspace(),
+        );
+        const hasTargetMember = currentWorkspace.teamMembers.some(
+          (member) => toIdKey(member.id) === toIdKey(currentUser.id),
+        );
+        const updatedTeamMembers = (hasTargetMember
+          ? currentWorkspace.teamMembers.map((member) =>
+              toIdKey(member.id) === toIdKey(currentUser.id)
+                ? { ...member, name, email }
+                : member
+            )
+          : [
+              ...currentWorkspace.teamMembers,
+              {
+                id: currentUser.id,
+                name,
+                email,
+                password: currentUser.password || "",
+                role: currentUser.role,
+              },
+            ]);
+        const updatedWorkspace = {
+          ...currentWorkspace,
+          teamMembers: updatedTeamMembers,
+        };
+        const nextWorkspaces = { ...prevWorkspaces };
+
+        if (shouldMoveWorkspace) {
+          delete nextWorkspaces[activeWorkspaceId];
+        }
+
+        nextWorkspaces[nextWorkspaceId] = updatedWorkspace;
+        return nextWorkspaces;
+      });
+
+      if (shouldMoveWorkspace) {
+        setActiveWorkspaceId(nextWorkspaceId);
+      }
+    }
+
+    setUserState(nextUser);
+    addToast("Profile updated successfully", "success");
+    return nextUser;
+  };
+
   const addProject = (project) => {
     if (!isAdmin) {
       showAccessDenied("Only admins can create projects");
@@ -650,22 +743,43 @@ function AppProvider({ children }) {
       return null;
     }
 
-    const projectExists = projects.some(
-      (project) => toIdKey(project.id) === toIdKey(task.projectId),
+    const project = projects.find(
+      (projectValue) => toIdKey(projectValue.id) === toIdKey(task.projectId),
     );
 
-    if (!projectExists) {
+    if (!project) {
       showAccessDenied("Task project does not exist");
       return null;
     }
+    const teamMemberIdSet = new Set(teamMembers.map((member) => toIdKey(member.id)));
+    const normalizedAssigneeId = teamMemberIdSet.has(toIdKey(task.assigneeId))
+      ? task.assigneeId
+      : null;
+    const isAssigneeInProject = !normalizedAssigneeId || !Array.isArray(project.memberIds)
+      ? true
+      : project.memberIds.some((memberId) => toIdKey(memberId) === toIdKey(normalizedAssigneeId));
 
-    const newTask = {
+    if (!isAssigneeInProject) {
+      showAccessDenied("Task assignee must be part of the selected project");
+      return null;
+    }
+
+    const nextTask = {
       id: Date.now(),
       createdAt: new Date(),
       status: "Todo",
       priority: "Medium",
-      subtasks: [],
       ...task,
+      assigneeId: normalizedAssigneeId,
+      subtasks: normalizeSubtasksArray(task.subtasks || []).map((subtask) => ({
+        ...subtask,
+        assigneeId: teamMemberIdSet.has(toIdKey(subtask.assigneeId)) ? subtask.assigneeId : null,
+      })),
+    };
+    const newTask = {
+      ...nextTask,
+      status: normalizeTaskStatus(nextTask.status),
+      completedAt: resolveTaskCompletionDate(nextTask),
     };
 
     setTasks((prev) => [newTask, ...prev]);
@@ -719,11 +833,23 @@ function AppProvider({ children }) {
     }
 
     setTasks((prev) =>
-      prev.map((task) =>
-        toIdKey(task.id) === toIdKey(taskId)
-          ? { ...task, status: newStatus }
-          : task,
-      ),
+      prev.map((task) => {
+        if (toIdKey(task.id) !== toIdKey(taskId)) {
+          return task;
+        }
+
+        const normalizedStatus = normalizeTaskStatus(newStatus);
+        const nextTask = {
+          ...task,
+          status: normalizedStatus,
+          updatedAt: new Date(),
+        };
+        nextTask.completedAt = normalizedStatus === "Completed"
+          ? task.completedAt || new Date()
+          : null;
+
+        return nextTask;
+      }),
     );
   };
 
@@ -759,12 +885,52 @@ function AppProvider({ children }) {
       return;
     }
 
+    if (Object.prototype.hasOwnProperty.call(updatedData, "projectId")) {
+      const nextProjectId = updatedData.projectId;
+      const projectExists = projects.some(
+        (project) => toIdKey(project.id) === toIdKey(nextProjectId),
+      );
+      if (!projectExists) {
+        showAccessDenied("Task project does not exist");
+        return;
+      }
+    }
+
     setTasks((prev) =>
-      prev.map((task) =>
-        toIdKey(task.id) === toIdKey(taskId)
-          ? { ...task, ...updatedData }
-          : task,
-      ),
+      prev.map((task) => {
+        if (toIdKey(task.id) !== toIdKey(taskId)) {
+          return task;
+        }
+
+        const teamMemberIdSet = new Set(teamMembers.map((member) => toIdKey(member.id)));
+        const normalizedSubtasks = Object.prototype.hasOwnProperty.call(updatedData, "subtasks")
+          ? normalizeSubtasksArray(updatedData.subtasks).map((subtask) => ({
+              ...subtask,
+              assigneeId: teamMemberIdSet.has(toIdKey(subtask.assigneeId)) ? subtask.assigneeId : null,
+            }))
+          : normalizeSubtasksArray(task.subtasks);
+        const nextTask = {
+          ...task,
+          ...updatedData,
+          subtasks: normalizedSubtasks,
+          assigneeId: teamMemberIdSet.has(toIdKey(updatedData.assigneeId))
+            ? updatedData.assigneeId
+            : Object.prototype.hasOwnProperty.call(updatedData, "assigneeId")
+              ? null
+              : task.assigneeId,
+          updatedAt: new Date(),
+        };
+        const normalizedStatus = Object.prototype.hasOwnProperty.call(updatedData, "status")
+          ? normalizeTaskStatus(updatedData.status)
+          : normalizeTaskStatus(task.status);
+
+        nextTask.status = normalizedStatus;
+        nextTask.completedAt = normalizedStatus === "Completed"
+          ? task.completedAt || new Date()
+          : null;
+
+        return nextTask;
+      }),
     );
   };
 
@@ -812,17 +978,14 @@ function AppProvider({ children }) {
 
   const value = {
     user,
-    setUser,
     activeWorkspaceId,
     authenticateUser,
     registerAdminAccount,
+    updateCurrentUserProfile,
     logout,
     teamMembers,
-    setTeamMembers,
     projects,
-    setProjects,
     tasks,
-    setTasks,
     addProject,
     addTask,
     addTeamMember,

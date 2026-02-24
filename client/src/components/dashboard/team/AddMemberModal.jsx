@@ -62,9 +62,12 @@ function AddMemberModal({ isOpen, onClose, onAddMember }) {
       password,
     });
 
-    if (createdMember) {
-      handleClose();
+    if (!createdMember) {
+      setError("Could not add team member.");
+      return;
     }
+
+    handleClose();
   };
 
   if (!isAdmin) {

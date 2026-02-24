@@ -1,6 +1,8 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAppContext } from "../context/useAppContext";
 
+const VALID_ROLES = new Set(["Admin", "Member"]);
+
 function RoleRoute({ role }) {
   const { user } = useAppContext();
   const location = useLocation();
@@ -11,11 +13,11 @@ function RoleRoute({ role }) {
     user.email.trim(),
   );
 
-  if (!isAuthenticated || !user.role) {
+  if (!isAuthenticated || !VALID_ROLES.has(user.role)) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  if (role && user.role !== role) {
+  if (role && (!VALID_ROLES.has(role) || user.role !== role)) {
     const redirectPath = user.role === "Admin" ? "/admin" : "/member";
     return <Navigate to={redirectPath} replace />;
   }

@@ -23,9 +23,6 @@ function EditTaskModal({ isOpen, onClose, task }) {
   );
   const [error, setError] = useState("");
 
-  const createSubtaskId = () =>
-    `subtask-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
-
   if (!task || !isAdmin) {
     return null;
   }
@@ -38,7 +35,6 @@ function EditTaskModal({ isOpen, onClose, task }) {
     setSubtasks((prev) => [
       ...prev,
       normalizeSubtask({
-        id: createSubtaskId(),
         title: subtaskInput.trim(),
         completed: false,
         dueDate: null,

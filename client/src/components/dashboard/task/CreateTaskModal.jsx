@@ -20,9 +20,6 @@ function CreateTaskModal({ isOpen, onClose, onCreate }) {
   const [subtasks, setSubtasks] = useState([]);
   const [error, setError] = useState("");
 
-  const createSubtaskId = () =>
-    `subtask-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
-
   const resetForm = () => {
     setTitle("");
     setPriority("Medium");
@@ -42,7 +39,6 @@ function CreateTaskModal({ isOpen, onClose, onCreate }) {
     setSubtasks((prev) => [
       ...prev,
       normalizeSubtask({
-        id: createSubtaskId(),
         title: subtaskInput.trim(),
         completed: false,
         dueDate: null,

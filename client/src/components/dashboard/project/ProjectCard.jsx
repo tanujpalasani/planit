@@ -14,13 +14,17 @@ function ProjectCard({ project, onClick }) {
   const projectTaskCount = tasks.filter(
     (task) => String(task.projectId) === String(project.id)
   ).length;
+  const memberCount = Array.isArray(project.memberIds)
+    ? project.memberIds.length
+    : project.members || project.membersCount || 0;
 
   const handleOpenProject = () => {
     if (onClick) {
       onClick(project);
     } else {
-      const basePath = isAdmin ? "/admin" : "/member";
-      navigate(`${basePath}/projects/${project.id}`);
+      if (isAdmin) {
+        navigate(`/admin/projects/${project.id}`);
+      }
     }
   };
 
@@ -129,7 +133,7 @@ function ProjectCard({ project, onClick }) {
 
             <div className="flex items-center gap-2">
               <Users size={16} />
-              {project.members || project.membersCount || 0} Members
+              {memberCount} Members
             </div>
           </div>
         </div>
