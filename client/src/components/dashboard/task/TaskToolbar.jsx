@@ -1,12 +1,12 @@
 import { Plus } from "lucide-react";
 import { Button } from "../../ui";
 
-function TaskToolbar({ viewMode, setViewMode, onCreateClick }) {
+function TaskToolbar({ viewMode, setViewMode, onCreateClick, canCreate = true, title = "Tasks" }) {
   return (
     <div className="flex justify-between items-center">
       <div>
         <h1 className="text-3xl font-bold">
-          Tasks
+          {title}
         </h1>
 
         <p className="text-textSecondary">
@@ -43,14 +43,16 @@ function TaskToolbar({ viewMode, setViewMode, onCreateClick }) {
           </button>
         </div>
 
-        <Button
-          variant="primary"
-          onClick={onCreateClick}
-          className="px-5 py-2.5 rounded-lg hover:scale-105"
-          leftIcon={<Plus size={18} />}
-        >
-          Create Task
-        </Button>
+        {canCreate && (
+          <Button
+            variant="primary"
+            onClick={onCreateClick}
+            className="px-5 py-2.5 rounded-lg hover:scale-105"
+            leftIcon={<Plus size={18} />}
+          >
+            Create Task
+          </Button>
+        )}
       </div>
     </div>
   );

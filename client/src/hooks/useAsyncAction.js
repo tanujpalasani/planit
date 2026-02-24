@@ -25,9 +25,7 @@ function useAsyncAction() {
         }
 
         return result;
-      } catch (error) {
-        console.error(error);
-
+      } catch {
         if (showErrorToast) {
           if (errorMessage) {
             addToast(errorMessage, "error");

@@ -7,18 +7,20 @@ import { Card, Button, Badge, Modal } from "../../ui";
 
 function ProjectCard({ project, onClick }) {
   const navigate = useNavigate();
-  const { deleteProject, tasks } = useAppContext();
+  const { deleteProject, tasks, user } = useAppContext();
   const { addToast } = useToast();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const isAdmin = user?.role === "Admin";
   const projectTaskCount = tasks.filter(
-    (task) => task.projectId === project.id
+    (task) => String(task.projectId) === String(project.id)
   ).length;
 
   const handleOpenProject = () => {
     if (onClick) {
       onClick(project);
     } else {
-      navigate(`/dashboard/projects/${project.id}`);
+      const basePath = isAdmin ? "/admin" : "/member";
+      navigate(`${basePath}/projects/${project.id}`);
     }
   };
 
@@ -82,21 +84,23 @@ function ProjectCard({ project, onClick }) {
               </Badge>
 
               {/* Delete */}
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={handleDeleteProject}
-                className="
-                  h-8 w-8 p-0
-                  opacity-0
-                  group-hover:opacity-100
-                  focus-visible:opacity-100
-                  transition
-                "
-                aria-label="Delete project"
-              >
-                <Trash2 size={16} />
-              </Button>
+              {isAdmin && (
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={handleDeleteProject}
+                  className="
+                    h-8 w-8 p-0
+                    opacity-0
+                    group-hover:opacity-100
+                    focus-visible:opacity-100
+                    transition
+                  "
+                  aria-label="Delete project"
+                >
+                  <Trash2 size={16} />
+                </Button>
+              )}
             </div>
           </div>
 
@@ -131,34 +135,36 @@ function ProjectCard({ project, onClick }) {
         </div>
       </Card>
 
-      <Modal
-        isOpen={isConfirmOpen}
-        onClose={() => setIsConfirmOpen(false)}
-        title="Delete Project"
-        size="md"
-        footer={
-          <div className="flex justify-end gap-3">
-            <Button
-              variant="ghost"
-              type="button"
-              onClick={() => setIsConfirmOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="danger"
-              type="button"
-              onClick={handleConfirmDelete}
-            >
-              Delete
-            </Button>
-          </div>
-        }
-      >
-        <p className="text-sm text-textSecondary">
-          Are you sure you want to delete this project? This action cannot be undone.
-        </p>
-      </Modal>
+      {isAdmin && (
+        <Modal
+          isOpen={isConfirmOpen}
+          onClose={() => setIsConfirmOpen(false)}
+          title="Delete Project"
+          size="md"
+          footer={
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="ghost"
+                type="button"
+                onClick={() => setIsConfirmOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                type="button"
+                onClick={handleConfirmDelete}
+              >
+                Delete
+              </Button>
+            </div>
+          }
+        >
+          <p className="text-sm text-textSecondary">
+            Are you sure you want to delete this project? This action cannot be undone.
+          </p>
+        </Modal>
+      )}
     </>
   );
 }

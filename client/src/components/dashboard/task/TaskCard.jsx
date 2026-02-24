@@ -33,8 +33,13 @@ function TaskCard({
   const hasAutoCompletedRef = useRef(false);
 
   const assignee = teamMembers.find(
-    (member) => member.id === task.assigneeId
+    (member) => String(member.id) === String(task.assigneeId || "")
   );
+  const isAdmin = user?.role === "Admin";
+  const isAssignedToCurrentUser = Boolean(
+    user?.id && String(task.assigneeId || "") === String(user.id)
+  );
+  const canUpdateStatus = isAdmin || isAssignedToCurrentUser;
   const normalizedSubtasks = useMemo(
     () => normalizeSubtasksArray(task.subtasks),
     [task.subtasks]
@@ -98,15 +103,17 @@ function TaskCard({
 
   useEffect(() => {
     if (!hasAutoCompletedRef.current && !isTaskDone && totalSubtasks > 0 && completionPercent === 100) {
-      onStatusChange(task.id, "Completed");
-      hasAutoCompletedRef.current = true;
+      if (canUpdateStatus) {
+        onStatusChange(task.id, "Completed");
+      }
+      hasAutoCompletedRef.current = canUpdateStatus;
       return;
     }
 
     if (completionPercent < 100 || isTaskDone) {
       hasAutoCompletedRef.current = false;
     }
-  }, [completionPercent, isTaskDone, onStatusChange, task.id, totalSubtasks]);
+  }, [canUpdateStatus, completionPercent, isTaskDone, onStatusChange, task.id, totalSubtasks]);
 
 
   /* ---------------- Toggle Subtask (future backend ready) ---------------- */
@@ -315,29 +322,31 @@ function TaskCard({
               {task.status}
             </Badge>
 
-            <select
-              value={task.status}
-              onChange={handleStatusChange}
-              className="
-                absolute inset-0
-                w-full h-full
-                opacity-0
-                cursor-pointer
-              "
-              aria-label="Update task status"
-            >
-              <option value="Todo">
-                Todo
-              </option>
+            {canUpdateStatus && (
+              <select
+                value={task.status}
+                onChange={handleStatusChange}
+                className="
+                  absolute inset-0
+                  w-full h-full
+                  opacity-0
+                  cursor-pointer
+                "
+                aria-label="Update task status"
+              >
+                <option value="Todo">
+                  Todo
+                </option>
 
-              <option value="In Progress">
-                In Progress
-              </option>
+                <option value="In Progress">
+                  In Progress
+                </option>
 
-              <option value="Completed">
-                Completed
-              </option>
-            </select>
+                <option value="Completed">
+                  Completed
+                </option>
+              </select>
+            )}
           </div>
 
           {overdueCount > 0 && (
@@ -366,38 +375,41 @@ function TaskCard({
 
 
           {/* Delete */}
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={handleDeleteClick}
-            className="
-              opacity-0
-              group-hover:opacity-100
-              focus-visible:opacity-100
-              h-8 w-8 p-0
-              bg-transparent text-red-400 hover:text-red-300 hover:bg-red-500/10
-            "
-            aria-label="Delete task"
-          >
-            <Trash2 size={16} />
-          </Button>
+          {isAdmin && (
+            <>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleDeleteClick}
+                className="
+                  opacity-0
+                  group-hover:opacity-100
+                  focus-visible:opacity-100
+                  h-8 w-8 p-0
+                  bg-transparent text-red-400 hover:text-red-300 hover:bg-red-500/10
+                "
+                aria-label="Delete task"
+              >
+                <Trash2 size={16} />
+              </Button>
 
-          {/* Edit */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsEditOpen(true)}
-            className="
-              opacity-0
-              group-hover:opacity-100
-              focus-visible:opacity-100
-              h-8 w-8 p-0
-              text-blue-300 hover:text-blue-200
-            "
-            aria-label="Edit task"
-          >
-            <Edit size={16} />
-          </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsEditOpen(true)}
+                className="
+                  opacity-0
+                  group-hover:opacity-100
+                  focus-visible:opacity-100
+                  h-8 w-8 p-0
+                  text-blue-300 hover:text-blue-200
+                "
+                aria-label="Edit task"
+              >
+                <Edit size={16} />
+              </Button>
+            </>
+          )}
 
         </div>
 
@@ -448,18 +460,18 @@ function TaskCard({
               key={subtask.id || index}
               subtask={subtask}
               index={index}
-              onToggle={handleToggleSubtask}
-              onDelete={handleDeleteSubtask}
-              onUpdate={handleUpdateSubtask}
+              onToggle={isAdmin ? handleToggleSubtask : undefined}
+              onDelete={isAdmin ? handleDeleteSubtask : undefined}
+              onUpdate={isAdmin ? handleUpdateSubtask : undefined}
               dueDate={subtask.dueDate}
               assigneeId={subtask.assigneeId}
               isOverdue={isSubtaskOverdue(subtask)}
               isDragging={draggedIndex === index}
               isDropTarget={dropTargetIndex === index && draggedIndex !== index}
-              onDragStartSubtask={handleSubtaskDragStart}
-              onDragOverSubtask={handleSubtaskDragOver}
-              onDropSubtask={handleSubtaskDrop}
-              onDragEndSubtask={handleSubtaskDragEnd}
+              onDragStartSubtask={isAdmin ? handleSubtaskDragStart : undefined}
+              onDragOverSubtask={isAdmin ? handleSubtaskDragOver : undefined}
+              onDropSubtask={isAdmin ? handleSubtaskDrop : undefined}
+              onDragEndSubtask={isAdmin ? handleSubtaskDragEnd : undefined}
             />
 
           ))}
@@ -469,7 +481,7 @@ function TaskCard({
       )}
 
       {/* Edit Task Modal */}
-      {isEditOpen && (
+      {isEditOpen && isAdmin && (
         <EditTaskModal
           onClose={() => setIsEditOpen(false)}
           task={task}

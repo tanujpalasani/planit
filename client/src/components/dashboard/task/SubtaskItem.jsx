@@ -33,6 +33,9 @@ function SubtaskItem({
     }
   }, [isEditing]);
 
+  const canToggle = Boolean(onToggle);
+  const canEdit = Boolean(onUpdate);
+
   const saveEdit = () => {
     const trimmedValue = editValue.trim();
 
@@ -42,7 +45,7 @@ function SubtaskItem({
       return;
     }
 
-    if (trimmedValue !== subtask.title) {
+    if (trimmedValue !== subtask.title && canEdit) {
       onUpdate?.(subtask.id, trimmedValue, index);
     }
 
@@ -63,8 +66,11 @@ function SubtaskItem({
 
   return (
     <div
-      draggable={!isEditing}
+      draggable={!isEditing && Boolean(onDragStartSubtask)}
       onDragStart={(event) => {
+        if (!onDragStartSubtask) {
+          return;
+        }
         event.dataTransfer.effectAllowed = "move";
         event.dataTransfer.setData("text/plain", String(index));
         onDragStartSubtask?.(index);
@@ -98,7 +104,11 @@ function SubtaskItem({
 
         {/* Checkbox */}
         <button
-          onClick={() => onToggle(index)}
+          onClick={() => {
+            if (canToggle) {
+              onToggle(index);
+            }
+          }}
           className={`
             w-4 h-4
 
@@ -126,7 +136,7 @@ function SubtaskItem({
 
 
         {/* Title */}
-        {isEditing ? (
+        {isEditing && canEdit ? (
           <input
             ref={inputRef}
             value={editValue}
@@ -150,6 +160,9 @@ function SubtaskItem({
           <div className="min-w-0">
             <span
               onDoubleClick={() => {
+                if (!canEdit) {
+                  return;
+                }
                 setEditValue(subtask.title);
                 setIsEditing(true);
               }}

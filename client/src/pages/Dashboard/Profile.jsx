@@ -9,7 +9,7 @@ import {
 import { useAppContext } from "../../context/useAppContext";
 
 function Profile() {
-  const { user, setUser } = useAppContext();
+  const { user, setUser, setTeamMembers, projects, tasks } = useAppContext();
 
   /* ---------------- User State ---------------- */
 
@@ -20,7 +20,9 @@ function Profile() {
   /* ---------------- Handle Change ---------------- */
 
   const handleChange = (e) => {
-
+    if (e.target.name === "role") {
+      return;
+    }
     setFormUser({
       ...formUser,
       [e.target.name]: e.target.value
@@ -32,10 +34,31 @@ function Profile() {
   /* ---------------- Save ---------------- */
 
   const handleSave = () => {
-    setUser({
+    const nextUser = {
       ...user,
-      ...formUser
-    });
+      ...formUser,
+      role: user?.role || "Admin"
+    };
+
+    setUser(nextUser);
+    setTeamMembers((prevMembers) =>
+      prevMembers.map((member) => {
+        const isTargetMember = (
+          String(member.id) === String(user?.id) ||
+          member.email.trim().toLowerCase() === String(user?.email || "").trim().toLowerCase()
+        );
+
+        if (!isTargetMember) {
+          return member;
+        }
+
+        return {
+          ...member,
+          name: nextUser.name,
+          email: nextUser.email,
+        };
+      }),
+    );
 
     setIsEditing(false);
 
@@ -199,23 +222,7 @@ function Profile() {
 
               <Shield size={16} />
 
-              {isEditing ? (
-                <input
-                  name="role"
-                  value={formUser.role || ""}
-                  onChange={handleChange}
-                  className="
-                    bg-white/5
-                    border border-white/10
-
-                    px-2 py-1
-
-                    rounded
-                  "
-                />
-              ) : (
-                <span>{user?.role || "-"}</span>
-              )}
+              <span>{user?.role || "-"}</span>
 
             </div>
 
@@ -249,7 +256,7 @@ function Profile() {
           </p>
 
           <p className="text-2xl font-bold">
-            3
+            {projects.length}
           </p>
 
         </div>
@@ -268,7 +275,7 @@ function Profile() {
           </p>
 
           <p className="text-2xl font-bold">
-            12
+            {tasks.length}
           </p>
 
         </div>
@@ -287,7 +294,7 @@ function Profile() {
           </p>
 
           <p className="text-2xl font-bold">
-            5
+            {tasks.filter((task) => task.status === "Completed").length}
           </p>
 
         </div>

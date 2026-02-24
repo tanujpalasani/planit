@@ -2,8 +2,12 @@ import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { useToast } from "../../../hooks/useToast";
 import { Modal, Button } from "../../ui";
+import { useAppContext } from "../../../context/useAppContext";
 
 function TeamMemberCard({ member, onDelete }) {
+  const { user } = useAppContext();
+  const isAdmin = user?.role === "Admin";
+  const isProtectedMember = member.role === "Admin";
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const { addToast } = useToast();
   const getInitial = (name) => name.charAt(0).toUpperCase();
@@ -79,53 +83,57 @@ function TeamMemberCard({ member, onDelete }) {
         </div>
 
         {/* Right Section */}
-        <button
-          onClick={handleDeleteClick}
-          className="
-            p-2 rounded-lg
-            
-            text-textSecondary
-            hover:text-red-400
-            hover:bg-red-400/10
-            
-            transition-all duration-300
-            
-            opacity-0 group-hover:opacity-100
-          "
-          title="Remove member"
-        >
-          <Trash2 size={18} />
-        </button>
+        {isAdmin && !isProtectedMember && (
+          <button
+            onClick={handleDeleteClick}
+            className="
+              p-2 rounded-lg
+              
+              text-textSecondary
+              hover:text-red-400
+              hover:bg-red-400/10
+              
+              transition-all duration-300
+              
+              opacity-0 group-hover:opacity-100
+            "
+            title="Remove member"
+          >
+            <Trash2 size={18} />
+          </button>
+        )}
       </div>
 
-      <Modal
-        isOpen={isConfirmOpen}
-        onClose={() => setIsConfirmOpen(false)}
-        title="Remove Team Member"
-        size="md"
-        footer={
-          <div className="flex justify-end gap-3">
-            <Button
-              variant="ghost"
-              type="button"
-              onClick={() => setIsConfirmOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="danger"
-              type="button"
-              onClick={handleConfirmDelete}
-            >
-              Remove
-            </Button>
-          </div>
-        }
-      >
-        <p className="text-sm text-textSecondary">
-          Are you sure you want to remove this team member?
-        </p>
-      </Modal>
+      {isAdmin && !isProtectedMember && (
+        <Modal
+          isOpen={isConfirmOpen}
+          onClose={() => setIsConfirmOpen(false)}
+          title="Remove Team Member"
+          size="md"
+          footer={
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="ghost"
+                type="button"
+                onClick={() => setIsConfirmOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                type="button"
+                onClick={handleConfirmDelete}
+              >
+                Remove
+              </Button>
+            </div>
+          }
+        >
+          <p className="text-sm text-textSecondary">
+            Are you sure you want to remove this team member?
+          </p>
+        </Modal>
+      )}
     </>
   );
 }

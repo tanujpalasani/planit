@@ -4,11 +4,13 @@ import { useAppContext } from "../../context/useAppContext";
 import useAsyncAction from "../../hooks/useAsyncAction";
 import TeamMemberCard from "../../components/dashboard/team/TeamMemberCard";
 import AddMemberModal from "../../components/dashboard/team/AddMemberModal";
+import { Button } from "../../components/ui";
 
 function Team() {
-  const { teamMembers, setTeamMembers, addTeamMember } = useAppContext();
+  const { teamMembers, addTeamMember, removeTeamMember, user } = useAppContext();
   const { runAsync } = useAsyncAction();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const isAdmin = user?.role === "Admin";
 
   const handleOpenModal = () => {
     setIsModalOpen(true);
@@ -19,19 +21,22 @@ function Team() {
   };
 
   const handleAddMember = async (newMember) => {
-    await runAsync(
+    return runAsync(
       async () => {
         await new Promise((resolve) => setTimeout(resolve, 700));
-        addTeamMember(newMember);
+        const createdMember = addTeamMember(newMember);
+        if (!createdMember) {
+          throw new Error("Failed to add member");
+        }
+
+        return createdMember;
       },
       { successMessage: "Team member added successfully" },
     );
   };
 
   const handleDeleteMember = (memberId) => {
-    setTeamMembers((prev) =>
-      prev.filter((member) => member.id !== memberId)
-    );
+    removeTeamMember(memberId);
   };
 
   return (
@@ -49,27 +54,15 @@ function Team() {
         </div>
 
         {/* Add Member Button */}
-        <button
-          onClick={handleOpenModal}
-          className="
-            flex items-center gap-2
-
-            px-4 py-2.5
-
-            bg-gradient-primary
-            text-white font-medium
-
-            rounded-lg
-
-            hover:scale-105
-            hover:shadow-lg
-
-            transition-all duration-300
-          "
-        >
-          <Plus size={18} />
-          Add Member
-        </button>
+        {isAdmin && (
+          <Button
+            onClick={handleOpenModal}
+            leftIcon={<Plus size={18} />}
+            className="hover:scale-105"
+          >
+            Add Member
+          </Button>
+        )}
       </div>
 
       {/* Members Grid */}
@@ -99,23 +92,14 @@ function Team() {
             No team members yet
           </p>
 
-          <button
-            onClick={handleOpenModal}
-            className="
-              px-6 py-2
-
-              bg-gradient-primary
-              text-white font-medium
-
-              rounded-lg
-
-              hover:scale-105
-
-              transition-all
-            "
-          >
-            Add First Member
-          </button>
+          {isAdmin && (
+            <Button
+              onClick={handleOpenModal}
+              className="hover:scale-105"
+            >
+              Add First Member
+            </Button>
+          )}
         </div>
       )}
 

@@ -1,12 +1,16 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 /* Public Pages */
 import Home from "../pages/Home/Home";
 import Login from "../pages/Login/Login";
 import Signup from "../pages/Signup/Signup";
 
-/* Dashboard Layout */
-import DashboardLayout from "../layouts/DashboardLayout";
+/* Role Routing */
+import RoleRoute from "./RoleRoute";
+
+/* Dashboard Layouts */
+import AdminLayout from "../layouts/AdminLayout";
+import MemberLayout from "../layouts/MemberLayout";
 
 /* Dashboard Pages */
 import DashboardHome from "../pages/Dashboard/DashboardHome";
@@ -15,9 +19,17 @@ import Tasks from "../pages/Dashboard/Tasks";
 import Profile from "../pages/Dashboard/Profile";
 import ProjectDetails from "../pages/Dashboard/ProjectDetails";
 import Team from "../pages/Dashboard/Team";
+import { useAppContext } from "../context/useAppContext";
 
 
 function AppRouter() {
+  const { user } = useAppContext();
+  const dashboardRedirect = user?.role === "Member"
+    ? "/member"
+    : user?.role === "Admin"
+      ? "/admin"
+      : "/login";
+
   return (
     <BrowserRouter>
 
@@ -31,23 +43,29 @@ function AppRouter() {
         <Route path="/signup" element={<Signup />} />
 
 
-        {/* Dashboard Routes (Protected later) */}
-        <Route path="/dashboard" element={<DashboardLayout />}>
-
-          {/* Default Dashboard Home */}
-          <Route index element={<DashboardHome />} />
-
-          {/* Future nested routes */}
-          <Route path="projects" element={<Projects />} /> 
-          <Route path="projects/:projectId" element={<ProjectDetails />} />
-          {/* <Route path="tasks" element={<Tasks />} /> */}
-          {/* <Route path="profile" element={<Profile />} /> */}
-          <Route path="tasks" element={<Tasks />} />
-          <Route path="team" element={<Team />} />
-          <Route path="profile" element={<Profile />} />
-
-
+        {/* Admin Routes */}
+        <Route element={<RoleRoute role="Admin" />}>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<DashboardHome />} />
+            <Route path="projects" element={<Projects />} />
+            <Route path="projects/:projectId" element={<ProjectDetails />} />
+            <Route path="tasks" element={<Tasks />} />
+            <Route path="team" element={<Team />} />
+            <Route path="profile" element={<Profile />} />
+          </Route>
         </Route>
+
+        {/* Member Routes */}
+        <Route element={<RoleRoute role="Member" />}>
+          <Route path="/member" element={<MemberLayout />}>
+            <Route index element={<DashboardHome memberView={true} />} />
+            <Route path="tasks" element={<Tasks assignedOnly={true} />} />
+            <Route path="profile" element={<Profile />} />
+          </Route>
+        </Route>
+
+        {/* Legacy dashboard redirect */}
+        <Route path="/dashboard" element={<Navigate to={dashboardRedirect} replace />} />
 
 
         {/* Optional fallback route */}

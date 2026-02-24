@@ -1,24 +1,15 @@
 import { Outlet } from "react-router-dom";
+import Sidebar from "../components/dashboard/layout/Sidebar";
+import Topbar from "../components/dashboard/layout/Topbar";
 
-// Updated path based on your structure
-import Sidebar from "../components/dashboard/layout/Sidebar.jsx";
-import Topbar from "../components/dashboard/layout/Topbar.jsx";
-
-function DashboardLayout() {
-
+function AdminLayout() {
   return (
     <div className="min-h-screen bg-primary text-white">
+      <Sidebar role="Admin" />
 
-      {/* Sidebar */}
-      <Sidebar />
-
-      {/* Main area */}
       <div className="ml-64 min-h-screen flex flex-col">
-
-        {/* Topbar */}
         <Topbar />
 
-        {/* Page content */}
         <main
           className="
             flex-1
@@ -33,10 +24,7 @@ function DashboardLayout() {
             overflow-x-hidden
           "
         >
-
-          {/* Glow background */}
           <div className="absolute inset-0 -z-10 overflow-hidden">
-
             <div className="
               absolute top-[10%] left-[20%]
               w-[400px] h-[400px]
@@ -52,19 +40,13 @@ function DashboardLayout() {
               blur-[140px]
               rounded-full
             " />
-
           </div>
 
-          {/* Route content renders here */}
           <Outlet />
-
         </main>
-
       </div>
-
     </div>
   );
-
 }
 
-export default DashboardLayout;
+export default AdminLayout;

@@ -13,16 +13,22 @@ function Topbar() {
   // Dynamic title based on route
   const getTitle = () => {
 
-    if (location.pathname === "/dashboard") return "Dashboard";
+    if (location.pathname === "/admin" || location.pathname === "/member") return "Dashboard";
 
-    if (location.pathname.startsWith("/dashboard/projects"))
+    if (location.pathname.startsWith("/admin/projects"))
       return "Projects";
 
-    if (location.pathname.startsWith("/dashboard/tasks"))
+    if (location.pathname.startsWith("/admin/tasks"))
       return "Tasks";
 
-    if (location.pathname.startsWith("/dashboard/profile"))
+    if (location.pathname.startsWith("/member/tasks"))
+      return "My Tasks";
+
+    if (location.pathname.startsWith("/admin/profile") || location.pathname.startsWith("/member/profile"))
       return "Profile";
+
+    if (location.pathname.startsWith("/admin/team"))
+      return "Team";
 
     return "Dashboard";
   };

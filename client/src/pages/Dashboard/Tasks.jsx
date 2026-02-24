@@ -8,7 +8,8 @@ import TaskToolbar from "../../components/dashboard/task/TaskToolbar";
 import TaskFilters from "../../components/dashboard/task/TaskFilters";
 import KanbanColumn from "../../components/dashboard/task/KanbanColumn";
 
-function Tasks() {
+function Tasks({ assignedOnly = false }) {
+  const toIdKey = (value) => String(value ?? "");
   const [isModalOpen, setIsModalOpen] =
     useState(false);
 
@@ -26,17 +27,24 @@ function Tasks() {
     projects,
     addTask,
     updateTaskStatus,
-    deleteTask
+    deleteTask,
+    user
   } = useAppContext();
   const { runAsync } = useAsyncAction();
+  const isAdmin = user?.role === "Admin";
 
   /* ---------- Create Task ---------- */
 
   const handleCreateTask = async (task) => {
-    await runAsync(
+    return runAsync(
       async () => {
         await new Promise((resolve) => setTimeout(resolve, 700));
-        addTask(task);
+        const createdTask = addTask(task);
+        if (!createdTask) {
+          throw new Error("Failed to create task");
+        }
+
+        return createdTask;
       },
       { successMessage: "Task created successfully" },
     );
@@ -57,9 +65,9 @@ function Tasks() {
 
   /* ---------- Resolve Project Name ---------- */
 
-  const getProjectName = (projectId) => {
-    const project = projects.find(
-      (p) => p.id === projectId
+  const getProjectName = (projectId, sourceProjects) => {
+    const project = sourceProjects.find(
+      (p) => toIdKey(p.id) === toIdKey(projectId)
     );
 
     return project
@@ -69,8 +77,27 @@ function Tasks() {
 
   /* ---------- Filter Tasks ---------- */
 
+  const scopedTasks = useMemo(() => {
+    if (!assignedOnly) {
+      return tasks;
+    }
+
+    return tasks.filter((task) =>
+      String(task.assigneeId || "") === String(user?.id || "")
+    );
+  }, [assignedOnly, tasks, user?.id]);
+
+  const visibleProjects = useMemo(() => {
+    if (!assignedOnly) {
+      return projects;
+    }
+
+    const projectIds = new Set(scopedTasks.map((task) => String(task.projectId)));
+    return projects.filter((project) => projectIds.has(String(project.id)));
+  }, [assignedOnly, projects, scopedTasks]);
+
   const filteredTasks = useMemo(() => {
-    return tasks.filter(task => {
+    return scopedTasks.filter(task => {
       // Filter by status
       if (selectedStatus !== "All" && task.status !== selectedStatus) {
         return false;
@@ -82,7 +109,7 @@ function Tasks() {
       }
 
       // Filter by project
-      if (selectedProject !== "All" && task.projectId !== parseInt(selectedProject)) {
+      if (selectedProject !== "All" && toIdKey(task.projectId) !== toIdKey(selectedProject)) {
         return false;
       }
 
@@ -97,11 +124,11 @@ function Tasks() {
 
       return true;
     });
-  }, [tasks, selectedStatus, selectedPriority, selectedProject, searchQuery]);
+  }, [scopedTasks, selectedStatus, selectedPriority, selectedProject, searchQuery]);
 
   const kanbanTasks = filteredTasks.map((task) => ({
     ...task,
-    projectName: getProjectName(task.projectId)
+    projectName: getProjectName(task.projectId, visibleProjects)
   }));
 
   return (
@@ -110,6 +137,8 @@ function Tasks() {
         viewMode={viewMode}
         setViewMode={setViewMode}
         onCreateClick={() => setIsModalOpen(true)}
+        canCreate={isAdmin}
+        title={assignedOnly ? "My Tasks" : "Tasks"}
       />
 
       <TaskFilters
@@ -121,18 +150,18 @@ function Tasks() {
         setSelectedProject={setSelectedProject}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        projects={projects}
+        projects={visibleProjects}
       />
 
       {viewMode === "list" ? (
         <div className="space-y-4">
-          {tasks.length === 0 && (
+          {scopedTasks.length === 0 && (
             <div className="text-center text-textSecondary py-10">
               No tasks found.
             </div>
           )}
 
-          {tasks.length > 0 && filteredTasks.length === 0 && (
+          {scopedTasks.length > 0 && filteredTasks.length === 0 && (
             <div className="text-center text-textSecondary py-10">
               No tasks match the current filters.
             </div>
@@ -141,7 +170,7 @@ function Tasks() {
           {filteredTasks.map(task => (
             <div key={task.id}>
               <div className="text-xs text-textSecondary mb-1">
-                {getProjectName(task.projectId)}
+                {getProjectName(task.projectId, visibleProjects)}
               </div>
 
               <TaskCard
@@ -180,13 +209,15 @@ function Tasks() {
         </div>
       )}
 
-      <CreateTaskModal
-        isOpen={isModalOpen}
-        onClose={() =>
-          setIsModalOpen(false)
-        }
-        onCreate={handleCreateTask}
-      />
+      {isAdmin && (
+        <CreateTaskModal
+          isOpen={isModalOpen}
+          onClose={() =>
+            setIsModalOpen(false)
+          }
+          onCreate={handleCreateTask}
+        />
+      )}
     </div>
   );
 }

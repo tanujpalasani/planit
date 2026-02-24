@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../../context/useAppContext";
 import useAsyncAction from "../../hooks/useAsyncAction";
+import { Button } from "../../components/ui";
 
 import ProjectCard from "../../components/dashboard/project/ProjectCard";
 import CreateProjectModal from "../../components/dashboard/project/CreateProjectModal";
@@ -10,8 +11,9 @@ import CreateProjectModal from "../../components/dashboard/project/CreateProject
 function Projects() {
 
   const navigate = useNavigate();
-  const { projects, addProject } = useAppContext();
+  const { projects, addProject, user } = useAppContext();
   const { runAsync } = useAsyncAction();
+  const isAdmin = user?.role === "Admin";
 
   /* ---------------- Modal State ---------------- */
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -19,18 +21,24 @@ function Projects() {
 
   /* ---------------- Create Project from Context ---------------- */
   const handleCreateProject = async (data) => {
-    await runAsync(
+    return runAsync(
       async () => {
-      await new Promise((resolve) => setTimeout(resolve, 700));
+        await new Promise((resolve) => setTimeout(resolve, 700));
 
-      addProject({
-        name: data.name,
-        description: data.description,
-        tasksCount: 0,
-        membersCount: 1,
-        status: "In Progress",
-        color: "from-purple-500 to-pink-500"
-      });
+        const createdProject = addProject({
+          name: data.name,
+          description: data.description,
+          tasksCount: 0,
+          membersCount: 1,
+          status: "In Progress",
+          color: "from-purple-500 to-pink-500",
+        });
+
+        if (!createdProject) {
+          throw new Error("Failed to create project");
+        }
+
+        return createdProject;
       },
       { successMessage: "Project created successfully" },
     );
@@ -39,7 +47,8 @@ function Projects() {
 
   /* ---------------- Navigate to Project ---------------- */
   const handleOpenProject = (project) => {
-    navigate(`/dashboard/projects/${project.id}`);
+    const basePath = isAdmin ? "/admin" : "/member";
+    navigate(`${basePath}/projects/${project.id}`);
   };
 
 
@@ -64,26 +73,15 @@ function Projects() {
 
 
         {/* Create Button */}
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="
-            flex items-center gap-2
-
-            px-5 py-2.5
-            rounded-lg
-
-            bg-gradient-primary
-            text-white font-medium
-
-            hover:scale-105
-            hover:shadow-lg
-
-            transition-all duration-300
-          "
-        >
-          <Plus size={18} />
-          Create Project
-        </button>
+        {isAdmin && (
+          <Button
+            onClick={() => setIsModalOpen(true)}
+            leftIcon={<Plus size={18} />}
+            className="hover:scale-105"
+          >
+            Create Project
+          </Button>
+        )}
 
       </div>
 
@@ -98,27 +96,32 @@ function Projects() {
           gap-6
         "
       >
-
-        {projects.map((project) => (
-
-          <ProjectCard
-            key={project.id}
-            project={project}
-            onClick={handleOpenProject}
-          />
-
-        ))}
+        {projects.length === 0 ? (
+          <div className="col-span-full rounded-xl border border-dashed border-white/10 bg-white/5 py-12 text-center text-textSecondary">
+            {isAdmin ? "No projects yet. Create your first project." : "No projects available in this workspace."}
+          </div>
+        ) : (
+          projects.map((project) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              onClick={handleOpenProject}
+            />
+          ))
+        )}
 
       </div>
 
 
 
       {/* Create Project Modal */}
-      <CreateProjectModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onCreate={handleCreateProject}
-      />
+      {isAdmin && (
+        <CreateProjectModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onCreate={handleCreateProject}
+        />
+      )}
 
 
     </div>

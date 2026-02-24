@@ -9,45 +9,66 @@ import {
   Users,
   LogOut,
 } from "lucide-react";
+import { useAppContext } from "../../../context/useAppContext";
 
-function Sidebar() {
+function Sidebar({ role }) {
 
   const navigate = useNavigate();
+  const { user, logout } = useAppContext();
+  const effectiveRole = role || user?.role || "Member";
+  const basePath = effectiveRole === "Admin" ? "/admin" : "/member";
 
-  const navItems = [
-    {
-      name: "Dashboard",
-      path: "/dashboard",
-      icon: LayoutDashboard,
-      end: true,
-    },
-    {
-      name: "Projects",
-      path: "/dashboard/projects",
-      icon: FolderKanban,
-    },
-    {
-      name: "Tasks",
-      path: "/dashboard/tasks",
-      icon: CheckSquare,
-    },
-    {
-      name: "Team",
-      path: "/dashboard/team",
-      icon: Users,
-    },
-    {
-      name: "Profile",
-      path: "/dashboard/profile",
-      icon: User,
-    },
-  ];
+  const navItems = effectiveRole === "Admin"
+    ? [
+        {
+          name: "Dashboard",
+          path: `${basePath}`,
+          icon: LayoutDashboard,
+          end: true,
+        },
+        {
+          name: "Projects",
+          path: `${basePath}/projects`,
+          icon: FolderKanban,
+        },
+        {
+          name: "Tasks",
+          path: `${basePath}/tasks`,
+          icon: CheckSquare,
+        },
+        {
+          name: "Team",
+          path: `${basePath}/team`,
+          icon: Users,
+        },
+        {
+          name: "Profile",
+          path: `${basePath}/profile`,
+          icon: User,
+        },
+      ]
+    : [
+        {
+          name: "Dashboard",
+          path: `${basePath}`,
+          icon: LayoutDashboard,
+          end: true,
+        },
+        {
+          name: "My Tasks",
+          path: `${basePath}/tasks`,
+          icon: CheckSquare,
+        },
+        {
+          name: "Profile",
+          path: `${basePath}/profile`,
+          icon: User,
+        },
+      ];
 
 
   const handleLogout = () => {
-
-    // future: clear auth token here
-
+    logout();
     navigate("/login");
   };
 
