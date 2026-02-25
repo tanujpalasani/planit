@@ -14,10 +14,14 @@ const buildSafeUser = (user) => ({
 const registerAdmin = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
+    const normalizedName = String(name || "").trim();
     const normalizedEmail = String(email || "").trim().toLowerCase();
 
-    if (!name || !normalizedEmail || !password) {
+    if (!normalizedName || !normalizedEmail || typeof password !== "string" || !password) {
       return res.status(400).json({ message: "Name, email, and password are required" });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
     }
 
     const existingUser = await User.findOne({ email: normalizedEmail });
@@ -26,7 +30,7 @@ const registerAdmin = async (req, res, next) => {
     }
 
     const admin = await User.create({
-      name: String(name).trim(),
+      name: normalizedName,
       email: normalizedEmail,
       password,
       role: "Admin",
@@ -91,8 +95,42 @@ const getMe = async (req, res, next) => {
   }
 };
 
+const updateMe = async (req, res, next) => {
+  try {
+    const { name, email } = req.body;
+    const normalizedName = String(name || "").trim();
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+
+    if (!normalizedName || !normalizedEmail) {
+      return res.status(400).json({ message: "Name and email are required" });
+    }
+
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const existingEmailOwner = await User.findOne({ email: normalizedEmail, _id: { $ne: user._id } }).select("_id");
+    if (existingEmailOwner) {
+      return res.status(409).json({ message: "Email already registered" });
+    }
+
+    user.name = normalizedName;
+    user.email = normalizedEmail;
+    await user.save();
+
+    return res.status(200).json({
+      message: "Profile updated successfully",
+      user: buildSafeUser(user),
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 module.exports = {
   registerAdmin,
   login,
   getMe,
+  updateMe,
 };

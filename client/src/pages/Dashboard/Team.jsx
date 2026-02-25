@@ -35,7 +35,7 @@ function Team() {
   };
 
   const handleDeleteMember = async (memberId) => {
-    await removeTeamMember(memberId);
+    return removeTeamMember(memberId);
   };
 
   return (

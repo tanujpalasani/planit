@@ -1,8 +1,13 @@
 const Project = require("../models/Project");
 const Task = require("../models/Task");
 const User = require("../models/User");
+const mongoose = require("mongoose");
 
 const getAdminScopeId = (reqUser) => (reqUser.role === "Admin" ? reqUser.userId : reqUser.adminId);
+const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
+const normalizeObjectIdList = (values) => (
+  Array.isArray(values) ? values.filter((value) => isValidObjectId(value)) : []
+);
 
 const getProjects = async (req, res, next) => {
   try {
@@ -30,8 +35,9 @@ const createProject = async (req, res, next) => {
     }
 
     const adminId = getAdminScopeId(req.user);
+    const validInputMemberIds = normalizeObjectIdList(memberIds);
     const validMemberIds = await User.find({
-      _id: { $in: Array.isArray(memberIds) ? memberIds : [] },
+      _id: { $in: validInputMemberIds },
       role: "Member",
       adminId,
     }).distinct("_id");
@@ -58,6 +64,9 @@ const updateProject = async (req, res, next) => {
     const { projectId } = req.params;
     const { title, description, memberIds } = req.body;
     const adminId = getAdminScopeId(req.user);
+    if (!isValidObjectId(projectId)) {
+      return res.status(400).json({ message: "Invalid projectId" });
+    }
 
     const project = await Project.findOne({ _id: projectId, adminId });
     if (!project) {
@@ -71,8 +80,9 @@ const updateProject = async (req, res, next) => {
       project.description = description.trim();
     }
     if (Array.isArray(memberIds)) {
+      const validInputMemberIds = normalizeObjectIdList(memberIds);
       const validMemberIds = await User.find({
-        _id: { $in: memberIds },
+        _id: { $in: validInputMemberIds },
         role: "Member",
         adminId,
       }).distinct("_id");
@@ -94,6 +104,9 @@ const deleteProject = async (req, res, next) => {
   try {
     const { projectId } = req.params;
     const adminId = getAdminScopeId(req.user);
+    if (!isValidObjectId(projectId)) {
+      return res.status(400).json({ message: "Invalid projectId" });
+    }
 
     const project = await Project.findOneAndDelete({ _id: projectId, adminId });
     if (!project) {

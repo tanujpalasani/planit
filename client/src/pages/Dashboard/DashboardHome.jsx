@@ -32,9 +32,16 @@ function DashboardHome({ memberView = false }) {
       return tasks;
     }
 
-    return tasks.filter((task) =>
-      String(task.assigneeId || "") === String(user?.id || "")
-    );
+    return tasks.filter((task) => {
+      const isTaskAssignee = String(task.assigneeId || "") === String(user?.id || "");
+      if (isTaskAssignee) {
+        return true;
+      }
+
+      return normalizeSubtasksArray(task.subtasks).some(
+        (subtask) => String(subtask.assigneeId || "") === String(user?.id || "")
+      );
+    });
   }, [isMemberView, tasks, user?.id]);
 
   const scopedProjects = useMemo(() => {

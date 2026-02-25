@@ -22,7 +22,7 @@ function TaskCard({
   onDelete
 }) {
 
-  const { user, teamMembers, updateTask } = useAppContext();
+  const { user, teamMembers, updateTask, updateSubtaskCompletion } = useAppContext();
   const { addToast } = useToast();
 
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -119,14 +119,27 @@ function TaskCard({
   /* ---------------- Toggle Subtask (future backend ready) ---------------- */
 
   const handleToggleSubtask = (index) => {
-    const updatedSubtasks = normalizedSubtasks.map(
-      (subtask, i) =>
-        i === index
-          ? {
-              ...subtask,
-              completed: !subtask.completed
-            }
-          : subtask
+    const currentSubtask = normalizedSubtasks[index];
+    if (!currentSubtask) {
+      return;
+    }
+
+    if (!isAdmin) {
+      if (!currentSubtask.id) {
+        return;
+      }
+
+      void updateSubtaskCompletion(task.id, currentSubtask.id, !currentSubtask.completed);
+      return;
+    }
+
+    const updatedSubtasks = normalizedSubtasks.map((subtask, i) =>
+      i === index
+        ? {
+            ...subtask,
+            completed: !subtask.completed
+          }
+        : subtask
     );
 
     void updateTask(task.id, { subtasks: updatedSubtasks });
@@ -236,9 +249,11 @@ function TaskCard({
   };
 
   const handleConfirmDelete = async () => {
-    await onDelete(task.id);
-    addToast("Task deleted successfully", "success");
-    setIsConfirmOpen(false);
+    const deleted = await onDelete(task.id);
+    if (deleted) {
+      addToast("Task deleted successfully", "success");
+      setIsConfirmOpen(false);
+    }
   };
 
 
@@ -460,7 +475,11 @@ function TaskCard({
               key={subtask.id || index}
               subtask={subtask}
               index={index}
-              onToggle={isAdmin ? handleToggleSubtask : undefined}
+              onToggle={
+                isAdmin || String(subtask.assigneeId || "") === String(user?.id || "")
+                  ? handleToggleSubtask
+                  : undefined
+              }
               onDelete={isAdmin ? handleDeleteSubtask : undefined}
               onUpdate={isAdmin ? handleUpdateSubtask : undefined}
               dueDate={subtask.dueDate}

@@ -114,6 +114,11 @@ export const getCurrentUser = async () => {
   return normalizeUser(data?.user);
 };
 
+export const updateCurrentUserProfile = async (payload) => {
+  const { data } = await apiClient.put("/auth/me", payload);
+  return normalizeUser(data?.user);
+};
+
 export const getTeamMembers = async () => {
   const { data } = await apiClient.get("/users");
   const users = Array.isArray(data?.users) ? data.users : [];
@@ -169,6 +174,11 @@ export const updateTask = async (taskId, payload) => {
 
 export const updateTaskStatus = async (taskId, status) => {
   const { data } = await apiClient.patch(`/tasks/${taskId}/status`, { status });
+  return normalizeTask(data?.task);
+};
+
+export const updateSubtask = async (taskId, subtaskId, payload) => {
+  const { data } = await apiClient.patch(`/tasks/${taskId}/subtasks/${subtaskId}`, payload);
   return normalizeTask(data?.task);
 };
 

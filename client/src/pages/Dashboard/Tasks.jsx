@@ -59,7 +59,7 @@ function Tasks({ assignedOnly = false }) {
   /* ---------- Delete Task ---------- */
 
   const handleDeleteTask = async (taskId) => {
-    await deleteTask(taskId);
+    return deleteTask(taskId);
   };
 
   /* ---------- Resolve Project Name ---------- */
@@ -81,9 +81,17 @@ function Tasks({ assignedOnly = false }) {
       return tasks;
     }
 
-    return tasks.filter((task) =>
-      String(task.assigneeId || "") === String(user?.id || "")
-    );
+    return tasks.filter((task) => {
+      const isTaskAssignee = String(task.assigneeId || "") === String(user?.id || "");
+      if (isTaskAssignee) {
+        return true;
+      }
+
+      const subtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
+      return subtasks.some(
+        (subtask) => String(subtask?.assigneeId || "") === String(user?.id || "")
+      );
+    });
   }, [assignedOnly, tasks, user?.id]);
 
   const visibleProjects = useMemo(() => {

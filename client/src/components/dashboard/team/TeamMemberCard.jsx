@@ -16,10 +16,12 @@ function TeamMemberCard({ member, onDelete }) {
     setIsConfirmOpen(true);
   };
 
-  const handleConfirmDelete = () => {
-    onDelete(member.id);
-    addToast("Team member removed successfully", "success");
-    setIsConfirmOpen(false);
+  const handleConfirmDelete = async () => {
+    const removed = await onDelete(member.id);
+    if (removed) {
+      addToast("Team member removed successfully", "success");
+      setIsConfirmOpen(false);
+    }
   };
 
   return (

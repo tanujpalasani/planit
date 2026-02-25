@@ -76,7 +76,7 @@ function ProjectDetails() {
   /* ---------- Delete Task ---------- */
 
   const handleDeleteTask = async (taskId) => {
-    await deleteTask(taskId);
+    return deleteTask(taskId);
   };
 
 

@@ -1,8 +1,10 @@
 const User = require("../models/User");
 const Project = require("../models/Project");
 const Task = require("../models/Task");
+const mongoose = require("mongoose");
 
 const getAdminScopeId = (reqUser) => (reqUser.role === "Admin" ? reqUser.userId : reqUser.adminId);
+const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
 
 const getUsers = async (req, res, next) => {
   try {
@@ -22,10 +24,14 @@ const getUsers = async (req, res, next) => {
 const createMember = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
+    const normalizedName = String(name || "").trim();
     const normalizedEmail = String(email || "").trim().toLowerCase();
 
-    if (!name || !normalizedEmail || !password) {
+    if (!normalizedName || !normalizedEmail || typeof password !== "string" || !password) {
       return res.status(400).json({ message: "Name, email, and password are required" });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
     }
 
     const existingUser = await User.findOne({ email: normalizedEmail });
@@ -35,7 +41,7 @@ const createMember = async (req, res, next) => {
 
     const adminId = getAdminScopeId(req.user);
     const member = await User.create({
-      name: String(name).trim(),
+      name: normalizedName,
       email: normalizedEmail,
       password,
       role: "Member",
@@ -63,6 +69,9 @@ const deleteMember = async (req, res, next) => {
   try {
     const { userId } = req.params;
     const adminId = getAdminScopeId(req.user);
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ message: "Invalid userId" });
+    }
 
     const member = await User.findOne({
       _id: userId,

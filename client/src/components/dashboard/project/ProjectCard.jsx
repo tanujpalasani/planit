@@ -34,9 +34,11 @@ function ProjectCard({ project, onClick }) {
   };
 
   const handleConfirmDelete = async () => {
-    await deleteProject(project.id);
-    addToast("Project deleted successfully", "success");
-    setIsConfirmOpen(false);
+    const deleted = await deleteProject(project.id);
+    if (deleted) {
+      addToast("Project deleted successfully", "success");
+      setIsConfirmOpen(false);
+    }
   };
 
   return (

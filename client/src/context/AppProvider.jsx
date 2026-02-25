@@ -19,8 +19,10 @@ import {
   registerAdmin as registerAdminService,
   removeTeamMember as removeTeamMemberService,
   saveToken,
+  updateCurrentUserProfile as updateCurrentUserProfileService,
   updateTask as updateTaskService,
   updateTaskStatus as updateTaskStatusService,
+  updateSubtask as updateSubtaskService,
 } from "../services/dataService";
 
 const TEAM_MEMBER_ROLES = {
@@ -414,23 +416,28 @@ function AppProvider({ children }) {
       return null;
     }
 
-    const nextUser = {
-      ...currentUser,
-      name,
-      email,
-    };
+    try {
+      const updatedUser = await updateCurrentUserProfileService({ name, email });
+      const safeUser = sanitizeUser(updatedUser);
+      if (!safeUser.role) {
+        return null;
+      }
 
-    setUserState(nextUser);
-    setTeamMembers((prevMembers) =>
-      prevMembers.map((member) =>
-        toIdKey(member.id) === toIdKey(currentUser.id)
-          ? { ...member, name, email }
-          : member,
-      ),
-    );
+      setUserState(safeUser);
+      setTeamMembers((prevMembers) =>
+        prevMembers.map((member) =>
+          toIdKey(member.id) === toIdKey(currentUser.id)
+            ? { ...member, name: safeUser.name, email: safeUser.email }
+            : member,
+        ),
+      );
 
-    addToast("Profile updated successfully", "success");
-    return nextUser;
+      addToast("Profile updated successfully", "success");
+      return safeUser;
+    } catch (error) {
+      addToast(extractApiMessage(error, "Profile update failed."), "error");
+      return null;
+    }
   };
 
   const addProject = async (project) => {
@@ -606,6 +613,43 @@ function AppProvider({ children }) {
     }
   };
 
+  const updateSubtaskCompletion = async (taskId, subtaskId, completed) => {
+    const matchingTask = tasks.find((task) => toIdKey(task.id) === toIdKey(taskId));
+    if (!matchingTask) {
+      return false;
+    }
+
+    const matchingSubtask = normalizeSubtasksArray(matchingTask.subtasks).find(
+      (subtask) => toIdKey(subtask.id) === toIdKey(subtaskId),
+    );
+    if (!matchingSubtask) {
+      return false;
+    }
+
+    const isMemberAssignedSubtask = user?.role === TEAM_MEMBER_ROLES.MEMBER &&
+      String(matchingSubtask.assigneeId || "") === String(user?.id || "");
+    if (!isAdmin && !isMemberAssignedSubtask) {
+      showAccessDenied("You do not have permission to update this subtask");
+      return false;
+    }
+
+    try {
+      const updatedTask = await updateSubtaskService(taskId, subtaskId, { completed: Boolean(completed) });
+      if (!updatedTask) {
+        return false;
+      }
+
+      const safeTask = sanitizeTasks([updatedTask])[0];
+      setTasks((prev) =>
+        prev.map((task) => (toIdKey(task.id) === toIdKey(taskId) ? safeTask : task)),
+      );
+      return true;
+    } catch (error) {
+      showAccessDenied(extractApiMessage(error, "Failed to update subtask"));
+      return false;
+    }
+  };
+
   const removeTeamMember = async (memberId) => {
     if (!isAdmin) {
       showAccessDenied("Only admins can remove team members");
@@ -662,6 +706,7 @@ function AppProvider({ children }) {
     addTeamMember,
     removeTeamMember,
     updateTaskStatus,
+    updateSubtaskCompletion,
     deleteTask,
     deleteProject,
     updateTask,
