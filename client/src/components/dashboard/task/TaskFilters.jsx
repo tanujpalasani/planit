@@ -30,8 +30,11 @@ function TaskFilters({
             px-3 py-2
             text-white
             focus:outline-none
-            focus:border-purple-500
-            transition
+            hover:border-white/20
+            hover:bg-white/[0.07]
+            focus:border-white/40
+            focus:shadow-[0_0_0_1px_rgba(255,255,255,0.12)]
+            transition-all duration-200
           "
         >
           <option value="All">All</option>
@@ -57,8 +60,11 @@ function TaskFilters({
             px-3 py-2
             text-white
             focus:outline-none
-            focus:border-purple-500
-            transition
+            hover:border-white/20
+            hover:bg-white/[0.07]
+            focus:border-white/40
+            focus:shadow-[0_0_0_1px_rgba(255,255,255,0.12)]
+            transition-all duration-200
           "
         >
           <option value="All">All</option>
@@ -84,8 +90,11 @@ function TaskFilters({
             px-3 py-2
             text-white
             focus:outline-none
-            focus:border-purple-500
-            transition
+            hover:border-white/20
+            hover:bg-white/[0.07]
+            focus:border-white/40
+            focus:shadow-[0_0_0_1px_rgba(255,255,255,0.12)]
+            transition-all duration-200
           "
         >
           <option value="All">All Projects</option>

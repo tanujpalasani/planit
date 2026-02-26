@@ -2,78 +2,74 @@ import { useMemo, useState } from "react";
 import { Modal, Input, Button } from "../../ui";
 import { useAppContext } from "../../../context/useAppContext";
 
-function CreateProjectModal({ isOpen, onClose, onCreate }) {
+function EditProjectModal({ isOpen, onClose, project, onUpdate }) {
   const { user, teamMembers } = useAppContext();
   const isAdmin = user?.role === "Admin";
+
   const selectableMembers = useMemo(
     () => teamMembers.filter((member) => member.role === "Member"),
     [teamMembers]
   );
 
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    memberIds: [],
-  });
+  const [formData, setFormData] = useState(() => ({
+    name: project?.name || project?.title || "",
+    description: project?.description || "",
+    memberIds: Array.isArray(project?.memberIds) ? project.memberIds.map(String) : [],
+  }));
   const [error, setError] = useState("");
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      description: "",
-      memberIds: [],
-    });
-    setError("");
-  };
-
-  const handleClose = () => {
-    resetForm();
-    onClose();
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    const createdProject = await onCreate(formData);
-    if (!createdProject) {
-      setError("Could not create project.");
+    if (!project?.id) {
+      setError("Invalid project selected.");
       return;
     }
 
-    handleClose();
+    const updatedProject = await onUpdate(project.id, {
+      name: formData.name,
+      description: formData.description,
+      memberIds: formData.memberIds,
+    });
+
+    if (!updatedProject) {
+      setError("Could not update project.");
+      return;
+    }
+
+    onClose();
   };
 
-  if (!isAdmin) {
+  if (!isAdmin || !project) {
     return null;
   }
 
   return (
     <Modal
       isOpen={isOpen}
-      onClose={handleClose}
-      title="Create New Project"
+      onClose={onClose}
+      title="Edit Project"
       size="md"
       footer={
         <div className="flex justify-end gap-3">
-          <Button variant="ghost" type="button" onClick={handleClose}>
+          <Button variant="ghost" type="button" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" type="submit" form="create-project-form">
-            Create
+          <Button variant="primary" type="submit" form="edit-project-form">
+            Save Changes
           </Button>
         </div>
       }
     >
-      <form id="create-project-form" onSubmit={handleSubmit} className="space-y-4">
+      <form id="edit-project-form" onSubmit={handleSubmit} className="space-y-4">
         {error && <p className="text-sm text-red-300">{error}</p>}
         <Input
           label="Project Name"
@@ -104,7 +100,7 @@ function CreateProjectModal({ isOpen, onClose, onCreate }) {
           ) : (
             <div className="max-h-44 space-y-2 overflow-y-auto rounded-xl border border-white/10 bg-white/5 p-3">
               {selectableMembers.map((member) => {
-                const isChecked = formData.memberIds.includes(member.id);
+                const isChecked = formData.memberIds.includes(String(member.id));
 
                 return (
                   <label
@@ -122,7 +118,7 @@ function CreateProjectModal({ isOpen, onClose, onCreate }) {
                         setFormData((prev) => ({
                           ...prev,
                           memberIds: event.target.checked
-                            ? [...prev.memberIds, member.id]
+                            ? [...prev.memberIds, String(member.id)]
                             : prev.memberIds.filter((id) => String(id) !== String(member.id)),
                         }));
                       }}
@@ -139,4 +135,4 @@ function CreateProjectModal({ isOpen, onClose, onCreate }) {
   );
 }
 
-export default CreateProjectModal;
+export default EditProjectModal;

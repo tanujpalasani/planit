@@ -85,6 +85,8 @@ function Modal({
         )}
         onClick={(event) => event.stopPropagation()}
       >
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-primary opacity-80" />
+
         {(title || onClose) && (
           <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
             {title ? (
@@ -99,7 +101,7 @@ function Modal({
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg p-2 text-textSecondary transition-colors hover:bg-white/5 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70"
+                className="rounded-lg p-2 text-textSecondary transition-all duration-200 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
                 aria-label="Close modal"
               >
                 <svg

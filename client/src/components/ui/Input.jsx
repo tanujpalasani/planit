@@ -32,7 +32,8 @@ const Input = forwardRef(function Input(
           className={cn(
             "w-full rounded-xl border bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-textSecondary/80",
             "outline-none transition-all duration-200",
-            "focus:ring-1 focus:ring-purple-500",
+            "hover:border-white/20 hover:bg-white/[0.07]",
+            "focus:ring-1 focus:ring-white/50 focus:shadow-[0_0_0_1px_rgba(255,255,255,0.12)]",
             leftIcon && "pl-10",
             rightIcon && "pr-10",
             error

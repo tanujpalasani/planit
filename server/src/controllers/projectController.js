@@ -80,6 +80,9 @@ const updateProject = async (req, res, next) => {
       project.description = description.trim();
     }
     if (Array.isArray(memberIds)) {
+      const previousMemberIds = Array.isArray(project.memberIds)
+        ? project.memberIds.map((memberId) => String(memberId))
+        : [];
       const validInputMemberIds = normalizeObjectIdList(memberIds);
       const validMemberIds = await User.find({
         _id: { $in: validInputMemberIds },
@@ -87,6 +90,19 @@ const updateProject = async (req, res, next) => {
         adminId,
       }).distinct("_id");
       project.memberIds = validMemberIds;
+      const nextMemberKeys = new Set(validMemberIds.map((memberId) => String(memberId)));
+      const removedMemberIds = previousMemberIds.filter((memberId) => !nextMemberKeys.has(memberId));
+      if (removedMemberIds.length > 0) {
+        await Task.updateMany(
+          { adminId, projectId: project._id, assigneeId: { $in: removedMemberIds } },
+          { $set: { assigneeId: null } }
+        );
+        await Task.updateMany(
+          { adminId, projectId: project._id, "subtasks.assigneeId": { $in: removedMemberIds } },
+          { $set: { "subtasks.$[subtask].assigneeId": null } },
+          { arrayFilters: [{ "subtask.assigneeId": { $in: removedMemberIds } }] }
+        );
+      }
     }
 
     await project.save();

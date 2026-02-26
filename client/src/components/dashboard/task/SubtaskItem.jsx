@@ -83,7 +83,7 @@ function SubtaskItem({
 
         flex items-center justify-between
 
-        ${isDropTarget ? "bg-white/10 border-blue-400/70" : isOverdue ? "bg-red-500/10 border-red-400/30" : "bg-white/5 border-white/10"}
+        ${isDropTarget ? "bg-white/10 border-white/40 shadow-[0_0_0_1px_rgba(255,255,255,0.18)]" : isOverdue ? "bg-red-500/10 border-red-400/30" : "bg-white/5 border-white/10"}
         border
         border-l-2
         ${isOverdue ? "border-l-red-400" : "border-l-transparent"}
@@ -92,8 +92,8 @@ function SubtaskItem({
 
         px-3 py-2
 
-        hover:bg-white/10
-        transition-all
+        hover:bg-white/10 hover:border-white/20
+        transition-all duration-200
       `}
       style={{
         opacity: isDragging ? 0.55 : 1
@@ -122,7 +122,7 @@ function SubtaskItem({
 
             ${
               subtask.completed
-                ? "bg-green-500 border-green-500"
+                ? "bg-gradient-primary border-transparent"
                 : ""
             }
           `}
@@ -240,7 +240,8 @@ function SubtaskItem({
               opacity-0
               group-hover:opacity-100
 
-              transition
+              transition-all duration-200
+              hover:scale-105
             "
           >
             Remove

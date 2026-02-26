@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   FolderKanban,
   CheckSquare,
+  CalendarDays,
   User,
   Users,
   LogOut,
@@ -37,6 +38,11 @@ function Sidebar({ role }) {
           icon: CheckSquare,
         },
         {
+          name: "Calendar",
+          path: `${basePath}/calendar`,
+          icon: CalendarDays,
+        },
+        {
           name: "Team",
           path: `${basePath}/team`,
           icon: Users,
@@ -58,6 +64,11 @@ function Sidebar({ role }) {
           name: "My Tasks",
           path: `${basePath}/tasks`,
           icon: CheckSquare,
+        },
+        {
+          name: "Calendar",
+          path: `${basePath}/calendar`,
+          icon: CalendarDays,
         },
         {
           name: "Profile",
@@ -84,12 +95,16 @@ function Sidebar({ role }) {
         backdrop-blur-xl
 
         border-r border-white/10
+        overflow-hidden
 
         flex flex-col
 
         z-40
       "
     >
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-[1px] bg-gradient-primary opacity-60" />
+      <div className="pointer-events-none absolute -top-24 -left-20 h-60 w-60 rounded-full bg-gradient-primary opacity-20 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 -right-16 h-52 w-52 rounded-full bg-gradient-primary opacity-20 blur-3xl" />
 
       {/* Logo */}
       <div
@@ -115,6 +130,14 @@ function Sidebar({ role }) {
 
       </div>
 
+      <div className="mx-3 mt-4 rounded-xl border border-white/15 bg-white/5 p-3">
+        <p className="text-[11px] uppercase tracking-[0.16em] text-textSecondary">
+          Workspace
+        </p>
+        <p className="mt-2 inline-flex items-center rounded-full bg-gradient-primary px-2.5 py-1 text-xs font-semibold text-white">
+          {effectiveRole} Dashboard
+        </p>
+      </div>
 
 
       {/* Navigation */}
@@ -153,16 +176,19 @@ function Sidebar({ role }) {
 
                 ${
                   isActive
-                    ? "text-white bg-white/5 border-l-2 border-purple-500"
+                    ? "text-white bg-white/10 border border-white/15 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] [&>span:first-child]:opacity-15"
                     : "text-textSecondary hover:text-white hover:bg-white/5"
                 }
                 `
               }
             >
+              <span className="pointer-events-none absolute inset-0 rounded-lg bg-gradient-primary opacity-0 transition-opacity duration-200" />
 
-              <Icon size={18} />
+              <span className="relative z-10 flex h-7 w-7 items-center justify-center rounded-md bg-white/10">
+                <Icon size={16} />
+              </span>
 
-              {item.name}
+              <span className="relative z-10">{item.name}</span>
 
             </NavLink>
           );
@@ -197,7 +223,7 @@ function Sidebar({ role }) {
 
             text-textSecondary
 
-            hover:text-red-400
+            hover:text-white
             hover:bg-white/5
 
             transition-all duration-200

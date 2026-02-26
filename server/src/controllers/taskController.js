@@ -31,10 +31,6 @@ const isAssigneeAllowedInProject = (assigneeId, adminId, project) => {
   }
 
   const assigneeKey = String(assigneeId);
-  if (assigneeKey === String(adminId)) {
-    return true;
-  }
-
   const memberKeys = new Set((project?.memberIds || []).map((memberId) => String(memberId)));
   return memberKeys.has(assigneeKey);
 };
@@ -49,17 +45,15 @@ const resolveAssignableUserId = async (assigneeId, adminId, allowedMemberIds = n
 
   const user = await User.findOne({
     _id: assigneeId,
-    $or: [
-      { role: "Member", adminId },
-      { role: "Admin", _id: adminId },
-    ],
-  }).select("_id role");
+    role: "Member",
+    adminId,
+  }).select("_id");
 
   if (!user) {
     return null;
   }
 
-  if (user.role === "Member" && Array.isArray(allowedMemberIds)) {
+  if (Array.isArray(allowedMemberIds)) {
     const allowedKeys = new Set(allowedMemberIds.map((memberId) => String(memberId)));
     if (!allowedKeys.has(String(user._id))) {
       return null;
@@ -192,6 +186,13 @@ const createTask = async (req, res, next) => {
       createdBy: req.user.userId,
       completedAt: status === "Completed" ? new Date() : null,
     });
+    if (task.assigneeId) {
+      task.subtasks = (task.subtasks || []).map((subtask) => ({
+        ...subtask.toObject(),
+        assigneeId: task.assigneeId,
+      }));
+      await task.save();
+    }
 
     return res.status(201).json({
       message: "Task created successfully",
@@ -298,6 +299,17 @@ const updateTask = async (req, res, next) => {
         return res.status(400).json({ message: "Subtask assignee must be in the selected project" });
       }
     }
+    if (task.assigneeId) {
+      task.subtasks = (task.subtasks || []).map((subtask) => ({
+        ...subtask.toObject(),
+        assigneeId: task.assigneeId,
+      }));
+    } else {
+      task.subtasks = (task.subtasks || []).map((subtask) => ({
+        ...subtask.toObject(),
+        assigneeId: null,
+      }));
+    }
 
     await task.save();
 
@@ -365,15 +377,8 @@ const updateSubtask = async (req, res, next) => {
         subtask.dueDate = normalizedSubtaskDueDate.date;
       }
       if (assigneeId !== undefined) {
-        if (assigneeId === null || assigneeId === "") {
-          subtask.assigneeId = null;
-        } else {
-          const normalizedAssigneeId = await resolveAssignableUserId(assigneeId, adminId, project.memberIds);
-          if (!normalizedAssigneeId) {
-            return res.status(400).json({ message: "Invalid subtask assigneeId" });
-          }
-          subtask.assigneeId = normalizedAssigneeId;
-        }
+        // Subtask assignee mirrors task assignee for consistency in project task ownership.
+        subtask.assigneeId = task.assigneeId || null;
       }
     }
 

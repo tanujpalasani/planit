@@ -19,6 +19,7 @@ import Tasks from "../pages/Dashboard/Tasks";
 import Profile from "../pages/Dashboard/Profile";
 import ProjectDetails from "../pages/Dashboard/ProjectDetails";
 import Team from "../pages/Dashboard/Team";
+import Calendar from "../pages/Dashboard/Calendar";
 import { useAppContext } from "../context/useAppContext";
 
 
@@ -62,6 +63,7 @@ function AppRouter() {
             <Route path="projects" element={<Projects />} />
             <Route path="projects/:projectId" element={<ProjectDetails />} />
             <Route path="tasks" element={<Tasks />} />
+            <Route path="calendar" element={<Calendar />} />
             <Route path="team" element={<Team />} />
             <Route path="profile" element={<Profile />} />
           </Route>
@@ -72,6 +74,7 @@ function AppRouter() {
           <Route path="/member" element={<MemberLayout />}>
             <Route index element={<DashboardHome memberView={true} />} />
             <Route path="tasks" element={<Tasks assignedOnly={true} />} />
+            <Route path="calendar" element={<Calendar />} />
             <Route path="profile" element={<Profile />} />
           </Route>
         </Route>

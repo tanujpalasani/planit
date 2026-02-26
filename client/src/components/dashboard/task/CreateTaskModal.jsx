@@ -1,30 +1,54 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { X, Plus } from "lucide-react";
 import { useAppContext } from "../../../context/useAppContext";
 import Modal from "../../ui/Modal";
 import { Button, Input } from "../../ui";
 import { normalizeSubtask } from "../../../utils/subtaskUtils";
 
-const selectClassName = "w-full mt-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white outline-none focus:border-purple-500";
+const selectClassName = "w-full mt-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white outline-none transition-all duration-200 hover:border-white/20 hover:bg-white/[0.07] focus:border-white/40 focus:shadow-[0_0_0_1px_rgba(255,255,255,0.12)]";
 
-function CreateTaskModal({ isOpen, onClose, onCreate }) {
+function CreateTaskModal({ isOpen, onClose, onCreate, defaultProjectId = "" }) {
   const { teamMembers, projects, user } = useAppContext();
   const isAdmin = user?.role === "Admin";
+  const isProjectLocked = Boolean(defaultProjectId);
 
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState("Medium");
   const [status, setStatus] = useState("Todo");
-  const [projectId, setProjectId] = useState("");
+  const [taskDueDate, setTaskDueDate] = useState("");
+  const [projectId, setProjectId] = useState(defaultProjectId);
   const [assigneeId, setAssigneeId] = useState("");
   const [subtaskInput, setSubtaskInput] = useState("");
   const [subtasks, setSubtasks] = useState([]);
   const [error, setError] = useState("");
+  const selectedProject = useMemo(
+    () => projects.find((project) => String(project.id) === String(projectId)) || null,
+    [projects, projectId]
+  );
+  const projectMemberIdSet = useMemo(
+    () => new Set((selectedProject?.memberIds || []).map((memberId) => String(memberId))),
+    [selectedProject]
+  );
+  const availableAssignees = useMemo(
+    () =>
+      teamMembers.filter(
+        (member) =>
+          member.role === "Member" &&
+          projectMemberIdSet.has(String(member.id))
+      ),
+    [projectMemberIdSet, teamMembers]
+  );
+
+  const normalizedAssigneeId = assigneeId && projectMemberIdSet.has(String(assigneeId))
+    ? assigneeId
+    : "";
 
   const resetForm = () => {
     setTitle("");
     setPriority("Medium");
     setStatus("Todo");
-    setProjectId("");
+    setTaskDueDate("");
+    setProjectId(defaultProjectId || "");
     setAssigneeId("");
     setSubtaskInput("");
     setSubtasks([]);
@@ -66,19 +90,6 @@ function CreateTaskModal({ isOpen, onClose, onCreate }) {
     );
   };
 
-  const handleSubtaskAssigneeChange = (index, value) => {
-    setSubtasks((prev) =>
-      prev.map((subtask, i) =>
-        i === index
-          ? normalizeSubtask({
-              ...subtask,
-              assigneeId: value || null,
-            })
-          : subtask,
-      ),
-    );
-  };
-
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
@@ -97,9 +108,13 @@ function CreateTaskModal({ isOpen, onClose, onCreate }) {
       title: title.trim(),
       status,
       priority,
+      dueDate: taskDueDate || null,
       projectId,
-      assigneeId: assigneeId || null,
-      subtasks,
+      assigneeId: normalizedAssigneeId || null,
+      subtasks: subtasks.map((subtask) => ({
+        ...subtask,
+        assigneeId: normalizedAssigneeId || null,
+      })),
     });
 
     if (!createdTask) {
@@ -164,11 +179,32 @@ function CreateTaskModal({ isOpen, onClose, onCreate }) {
           </div>
 
           <div>
+            <label className="text-sm text-textSecondary">Due Date</label>
+            <input
+              type="date"
+              value={taskDueDate}
+              onChange={(event) => setTaskDueDate(event.target.value)}
+              className={selectClassName}
+            />
+          </div>
+
+          <div>
             <label className="text-sm text-textSecondary">Project</label>
             <select
               value={projectId}
-              onChange={(event) => setProjectId(event.target.value)}
+              onChange={(event) => {
+                const nextProjectId = event.target.value;
+                setProjectId(nextProjectId);
+                setAssigneeId("");
+                setSubtasks((prev) =>
+                  prev.map((subtask) => ({
+                    ...subtask,
+                    assigneeId: null,
+                  }))
+                );
+              }}
               className={selectClassName}
+              disabled={isProjectLocked}
             >
               <option value="">Select project</option>
               {projects.map((project) => (
@@ -181,13 +217,16 @@ function CreateTaskModal({ isOpen, onClose, onCreate }) {
 
           <div>
             <label className="text-sm text-textSecondary">Assignee</label>
-            <select
-              value={assigneeId}
+          <select
+              value={normalizedAssigneeId}
               onChange={(event) => setAssigneeId(event.target.value)}
               className={selectClassName}
+              disabled={!projectId || availableAssignees.length === 0}
             >
-              <option value="">Select team member</option>
-              {teamMembers.map((member) => (
+              <option value="">
+                {!projectId ? "Select project first" : "Select team member"}
+              </option>
+              {availableAssignees.map((member) => (
                 <option key={member.id} value={member.id}>
                   {member.name}
                 </option>
@@ -221,19 +260,11 @@ function CreateTaskModal({ isOpen, onClose, onCreate }) {
                     onChange={(event) => handleSubtaskDueDateChange(index, event.target.value)}
                     className="bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-textSecondary"
                   />
-
-                  <select
-                    value={subtask.assigneeId ?? ""}
-                    onChange={(event) => handleSubtaskAssigneeChange(index, event.target.value)}
-                    className="bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-textSecondary"
-                  >
-                    <option value="">Unassigned</option>
-                    {teamMembers.map((member) => (
-                      <option key={member.id} value={member.id}>
-                        {member.name}
-                      </option>
-                    ))}
-                  </select>
+                  <span className="rounded border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-textSecondary">
+                    {normalizedAssigneeId
+                      ? `Assigned to ${availableAssignees.find((member) => String(member.id) === String(normalizedAssigneeId))?.name || "selected member"}`
+                      : "Select task assignee first"}
+                  </span>
 
                   <button type="button" onClick={() => handleRemoveSubtask(index)} aria-label="Remove subtask">
                     <X size={12} />

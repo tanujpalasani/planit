@@ -8,6 +8,7 @@ import {
   addTeamMember as addTeamMemberService,
   clearLegacyPersistence,
   clearToken,
+  deleteCurrentAccount as deleteCurrentAccountService,
   deleteProject as deleteProjectService,
   deleteTask as deleteTaskService,
   getCurrentUser,
@@ -20,6 +21,7 @@ import {
   removeTeamMember as removeTeamMemberService,
   saveToken,
   updateCurrentUserProfile as updateCurrentUserProfileService,
+  updateProject as updateProjectService,
   updateTask as updateTaskService,
   updateTaskStatus as updateTaskStatusService,
   updateSubtask as updateSubtaskService,
@@ -37,6 +39,9 @@ const defaultUser = {
   name: "",
   email: "",
   role: "",
+  adminId: null,
+  createdAt: null,
+  updatedAt: null,
 };
 
 const toIdKey = (value) => String(value ?? "");
@@ -114,6 +119,9 @@ const sanitizeUser = (user) => {
     name,
     email,
     role,
+    adminId: user.adminId ?? null,
+    createdAt: user.createdAt ?? null,
+    updatedAt: user.updatedAt ?? null,
   };
 };
 
@@ -402,6 +410,25 @@ function AppProvider({ children }) {
     return true;
   };
 
+  const deleteCurrentAccount = async (currentPassword) => {
+    const safePassword = String(currentPassword || "");
+    if (!safePassword) {
+      addToast("Current password is required", "error");
+      return false;
+    }
+
+    try {
+      await deleteCurrentAccountService({ currentPassword: safePassword });
+      clearToken();
+      resetAppState();
+      addToast("Account and workspace deleted permanently", "success");
+      return true;
+    } catch (error) {
+      addToast(extractApiMessage(error, "Failed to delete account"), "error");
+      return false;
+    }
+  };
+
   const updateCurrentUserProfile = async (profileData) => {
     const currentUser = sanitizeUser(user);
     if (!currentUser.role) {
@@ -409,15 +436,26 @@ function AppProvider({ children }) {
       return null;
     }
 
-    const name = typeof profileData?.name === "string" ? profileData.name.trim() : "";
-    const email = typeof profileData?.email === "string" ? profileData.email.trim() : "";
-    if (!name || !email) {
-      addToast("Name and email are required", "error");
+    const payload = {};
+    if (typeof profileData?.name === "string") {
+      payload.name = profileData.name.trim();
+    }
+    if (typeof profileData?.email === "string") {
+      payload.email = profileData.email.trim();
+    }
+    if (typeof profileData?.currentPassword === "string") {
+      payload.currentPassword = profileData.currentPassword;
+    }
+    if (typeof profileData?.newPassword === "string") {
+      payload.newPassword = profileData.newPassword;
+    }
+    if (Object.keys(payload).length === 0) {
+      addToast("No profile changes detected", "error");
       return null;
     }
 
     try {
-      const updatedUser = await updateCurrentUserProfileService({ name, email });
+      const updatedUser = await updateCurrentUserProfileService(payload);
       const safeUser = sanitizeUser(updatedUser);
       if (!safeUser.role) {
         return null;
@@ -432,10 +470,10 @@ function AppProvider({ children }) {
         ),
       );
 
-      addToast("Profile updated successfully", "success");
+      addToast("Account updated successfully", "success");
       return safeUser;
     } catch (error) {
-      addToast(extractApiMessage(error, "Profile update failed."), "error");
+      addToast(extractApiMessage(error, "Account update failed."), "error");
       return null;
     }
   };
@@ -469,6 +507,68 @@ function AppProvider({ children }) {
       return safeProject;
     } catch (error) {
       showAccessDenied(extractApiMessage(error, "Failed to create project"));
+      return null;
+    }
+  };
+
+  const updateProject = async (projectId, projectData) => {
+    if (!isAdmin) {
+      showAccessDenied("Only admins can edit projects");
+      return null;
+    }
+
+    if (!projectId) {
+      showAccessDenied("Invalid project selected");
+      return null;
+    }
+
+    const titleSource = typeof projectData?.title === "string" && projectData.title.trim()
+      ? projectData.title
+      : projectData?.name;
+    const title = typeof titleSource === "string" ? titleSource.trim() : "";
+    if (!title) {
+      showAccessDenied("Project name is required");
+      return null;
+    }
+
+    try {
+      const updatedProject = await updateProjectService(projectId, {
+        title,
+        description: typeof projectData?.description === "string" ? projectData.description : "",
+        memberIds: Array.isArray(projectData?.memberIds) ? projectData.memberIds : [],
+      });
+      if (!updatedProject) {
+        return null;
+      }
+
+      const safeProject = sanitizeProjects([updatedProject])[0];
+      setProjects((prev) =>
+        prev.map((project) =>
+          toIdKey(project.id) === toIdKey(projectId) ? safeProject : project
+        ),
+      );
+
+      const allowedMemberKeys = new Set((safeProject.memberIds || []).map((id) => toIdKey(id)));
+      setTasks((prev) =>
+        prev.map((task) => {
+          if (toIdKey(task.projectId) !== toIdKey(projectId)) {
+            return task;
+          }
+
+          return {
+            ...task,
+            assigneeId: allowedMemberKeys.has(toIdKey(task.assigneeId)) ? task.assigneeId : null,
+            subtasks: normalizeSubtasksArray(task.subtasks).map((subtask) => ({
+              ...subtask,
+              assigneeId: allowedMemberKeys.has(toIdKey(subtask.assigneeId)) ? subtask.assigneeId : null,
+            })),
+          };
+        }),
+      );
+
+      return safeProject;
+    } catch (error) {
+      showAccessDenied(extractApiMessage(error, "Failed to update project"));
       return null;
     }
   };
@@ -697,11 +797,13 @@ function AppProvider({ children }) {
     authenticateUser,
     registerAdminAccount,
     updateCurrentUserProfile,
+    deleteCurrentAccount,
     logout,
     teamMembers,
     projects,
     tasks,
     addProject,
+    updateProject,
     addTask,
     addTeamMember,
     removeTeamMember,

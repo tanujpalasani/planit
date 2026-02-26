@@ -7,16 +7,18 @@ import { Button } from "../../components/ui";
 
 import ProjectCard from "../../components/dashboard/project/ProjectCard";
 import CreateProjectModal from "../../components/dashboard/project/CreateProjectModal";
+import EditProjectModal from "../../components/dashboard/project/EditProjectModal";
 
 function Projects() {
 
   const navigate = useNavigate();
-  const { projects, addProject, user } = useAppContext();
+  const { projects, addProject, updateProject, user } = useAppContext();
   const { runAsync } = useAsyncAction();
   const isAdmin = user?.role === "Admin";
 
   /* ---------------- Modal State ---------------- */
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState(null);
 
 
   /* ---------------- Create Project from Context ---------------- */
@@ -26,9 +28,7 @@ function Projects() {
         const createdProject = await addProject({
           name: data.name,
           description: data.description,
-          tasksCount: 0,
-          status: "In Progress",
-          color: "from-purple-500 to-pink-500",
+          memberIds: Array.isArray(data.memberIds) ? data.memberIds : [],
         });
 
         if (!createdProject) {
@@ -45,6 +45,27 @@ function Projects() {
   /* ---------------- Navigate to Project ---------------- */
   const handleOpenProject = (project) => {
     navigate(`/admin/projects/${project.id}`);
+  };
+  const handleEditProject = (project) => {
+    setEditingProject(project);
+  };
+  const handleUpdateProject = async (projectId, data) => {
+    return runAsync(
+      async () => {
+        const updatedProject = await updateProject(projectId, {
+          name: data.name,
+          description: data.description,
+          memberIds: data.memberIds,
+        });
+
+        if (!updatedProject) {
+          throw new Error("Failed to update project");
+        }
+
+        return updatedProject;
+      },
+      { successMessage: "Project updated successfully" },
+    );
   };
 
 
@@ -102,6 +123,7 @@ function Projects() {
               key={project.id}
               project={project}
               onClick={handleOpenProject}
+              onEdit={handleEditProject}
             />
           ))
         )}
@@ -116,6 +138,16 @@ function Projects() {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onCreate={handleCreateProject}
+        />
+      )}
+
+      {isAdmin && editingProject && (
+        <EditProjectModal
+          key={editingProject.id}
+          isOpen={Boolean(editingProject)}
+          onClose={() => setEditingProject(null)}
+          project={editingProject}
+          onUpdate={handleUpdateProject}
         />
       )}
 

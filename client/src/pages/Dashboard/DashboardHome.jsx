@@ -1,5 +1,5 @@
 import { useAppContext } from "../../context/useAppContext";
-import { useMemo } from "react";
+import { createElement, useMemo } from "react";
 
 
 import {
@@ -14,6 +14,26 @@ import TaskCard from "../../components/dashboard/task/TaskCard";
 import { Card, Badge } from "../../components/ui";
 import { isPastDate, isWithinNextDays, sortByDateAsc } from "../../utils/dateUtils";
 import { normalizeSubtasksArray } from "../../utils/subtaskUtils";
+
+function StatCard({ icon, value, label }) {
+  return (
+    <Card hover={true} className="space-y-4 border-white/15 bg-white/[0.06]">
+      <div className="flex items-center justify-between">
+        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-primary shadow-glow">
+          {createElement(icon, { size: 18, className: "text-white" })}
+        </span>
+
+        <span className="text-2xl font-bold text-white">
+          {value}
+        </span>
+      </div>
+
+      <p className="text-sm text-textSecondary">
+        {label}
+      </p>
+    </Card>
+  );
+}
 
 function DashboardHome({ memberView = false }) {
   const {
@@ -113,14 +133,9 @@ function DashboardHome({ memberView = false }) {
     );
 
     let productivityLabel = "Needs Attention";
-    let productivityVariant = "danger";
 
     if (completionRate > 75) {
       productivityLabel = "High Productivity";
-      productivityVariant = "success";
-    } else if (completionRate >= 40) {
-      productivityLabel = "Moderate Productivity";
-      productivityVariant = "warning";
     }
 
     return {
@@ -130,7 +145,6 @@ function DashboardHome({ memberView = false }) {
       mostActiveProjectName: mostActiveProject.project?.name || "N/A",
       mostActiveProjectCount: mostActiveProject.count,
       productivityLabel,
-      productivityVariant,
       teamSize: teamMembers.length
     };
   }, [scopedTasks, scopedProjects, teamMembers]);
@@ -232,6 +246,60 @@ function DashboardHome({ memberView = false }) {
 
     return date.toLocaleDateString();
   };
+  const memberStatItems = [
+    {
+      label: "Assigned Tasks",
+      value: memberStats?.totalTasks ?? 0,
+      icon: Target,
+    },
+    {
+      label: "Completed",
+      value: memberStats?.completedTasks ?? 0,
+      icon: CalendarCheck2,
+    },
+    {
+      label: "Overdue Subtasks",
+      value: memberStats?.overdueSubtasks ?? 0,
+      icon: AlertTriangle,
+    },
+    {
+      label: "Active Projects",
+      value: memberStats?.projectCount ?? 0,
+      icon: Activity,
+    },
+    {
+      label: "Open Tasks",
+      value: memberStats?.openTasks ?? 0,
+      icon: Gauge,
+    },
+  ];
+  const adminStatItems = [
+    {
+      label: "Completion Rate",
+      value: `${analytics.completionRate}%`,
+      icon: Target,
+    },
+    {
+      label: "Tasks Completed This Week",
+      value: analytics.tasksCompletedThisWeek,
+      icon: CalendarCheck2,
+    },
+    {
+      label: "Overdue Tasks",
+      value: analytics.overdueTasks,
+      icon: AlertTriangle,
+    },
+    {
+      label: `Most Active Project (${analytics.mostActiveProjectCount} tasks)`,
+      value: analytics.mostActiveProjectName,
+      icon: Activity,
+    },
+    {
+      label: `Productivity (${analytics.teamSize} team members)`,
+      value: analytics.productivityLabel,
+      icon: Gauge,
+    },
+  ];
 
 
   return (
@@ -239,19 +307,23 @@ function DashboardHome({ memberView = false }) {
 
 
       {/* Welcome Section */}
-      <div>
+      <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/[0.06] p-6 md:p-8">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-primary opacity-10" />
+        <div className="relative">
+          <p className="text-xs uppercase tracking-[0.16em] text-textSecondary">
+            Planit Dashboard
+          </p>
 
-        <h1 className="text-3xl font-bold">
-          {isMemberView ? "Your Task Overview" : `Welcome back, ${user?.name || "User"}`}
-        </h1>
+          <h1 className="mt-3 text-3xl font-bold">
+            {isMemberView ? "Your Task Overview" : `Welcome back, ${user?.name || "User"}`}
+          </h1>
 
-
-        <p className="text-textSecondary">
-          {isMemberView
-            ? "Focus on the tasks assigned to you."
-            : "Here's what's happening today."}
-        </p>
-
+          <p className="mt-2 text-textSecondary">
+            {isMemberView
+              ? "Focus on the tasks assigned to you."
+              : "Here's what's happening today."}
+          </p>
+        </div>
       </div>
 
 
@@ -266,65 +338,14 @@ function DashboardHome({ memberView = false }) {
             gap-6
           "
         >
-          <Card hover={true} className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Target size={20} className="text-blue-300" />
-              <span className="text-2xl font-bold">
-                {memberStats?.totalTasks ?? 0}
-              </span>
-            </div>
-            <p className="text-sm text-textSecondary">
-              Assigned Tasks
-            </p>
-          </Card>
-
-          <Card hover={true} className="space-y-4">
-            <div className="flex items-center justify-between">
-              <CalendarCheck2 size={20} className="text-green-300" />
-              <span className="text-2xl font-bold">
-                {memberStats?.completedTasks ?? 0}
-              </span>
-            </div>
-            <p className="text-sm text-textSecondary">
-              Completed
-            </p>
-          </Card>
-
-          <Card hover={true} className="space-y-4">
-            <div className="flex items-center justify-between">
-              <AlertTriangle size={20} className="text-amber-300" />
-              <span className="text-2xl font-bold">
-                {memberStats?.overdueSubtasks ?? 0}
-              </span>
-            </div>
-            <p className="text-sm text-textSecondary">
-              Overdue Subtasks
-            </p>
-          </Card>
-
-          <Card hover={true} className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Activity size={20} className="text-purple-300" />
-              <span className="text-lg font-semibold text-right">
-                {memberStats?.projectCount ?? 0}
-              </span>
-            </div>
-            <p className="text-sm text-textSecondary">
-              Active Projects
-            </p>
-          </Card>
-
-          <Card hover={true} className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Gauge size={20} className="text-pink-300" />
-              <span className="text-2xl font-bold">
-                {memberStats?.openTasks ?? 0}
-              </span>
-            </div>
-            <p className="text-sm text-textSecondary">
-              Open Tasks
-            </p>
-          </Card>
+          {memberStatItems.map((item) => (
+            <StatCard
+              key={item.label}
+              icon={item.icon}
+              value={item.value}
+              label={item.label}
+            />
+          ))}
 
         </div>
       ) : (
@@ -336,65 +357,14 @@ function DashboardHome({ memberView = false }) {
             gap-6
           "
         >
-          <Card hover={true} className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Target size={20} className="text-blue-300" />
-              <span className="text-2xl font-bold">
-                {analytics.completionRate}%
-              </span>
-            </div>
-            <p className="text-sm text-textSecondary">
-              Completion Rate
-            </p>
-          </Card>
-
-          <Card hover={true} className="space-y-4">
-            <div className="flex items-center justify-between">
-              <CalendarCheck2 size={20} className="text-green-300" />
-              <span className="text-2xl font-bold">
-                {analytics.tasksCompletedThisWeek}
-              </span>
-            </div>
-            <p className="text-sm text-textSecondary">
-              Tasks Completed This Week
-            </p>
-          </Card>
-
-          <Card hover={true} className="space-y-4">
-            <div className="flex items-center justify-between">
-              <AlertTriangle size={20} className="text-amber-300" />
-              <span className="text-2xl font-bold">
-                {analytics.overdueTasks}
-              </span>
-            </div>
-            <p className="text-sm text-textSecondary">
-              Overdue Tasks
-            </p>
-          </Card>
-
-          <Card hover={true} className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Activity size={20} className="text-purple-300" />
-              <span className="text-lg font-semibold text-right">
-                {analytics.mostActiveProjectName}
-              </span>
-            </div>
-            <p className="text-sm text-textSecondary">
-              Most Active Project ({analytics.mostActiveProjectCount} tasks)
-            </p>
-          </Card>
-
-          <Card hover={true} className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Gauge size={20} className="text-pink-300" />
-              <Badge variant={analytics.productivityVariant}>
-                {analytics.productivityLabel}
-              </Badge>
-            </div>
-            <p className="text-sm text-textSecondary">
-              Productivity Badge ({analytics.teamSize} team members)
-            </p>
-          </Card>
+          {adminStatItems.map((item) => (
+            <StatCard
+              key={item.label}
+              icon={item.icon}
+              value={item.value}
+              label={item.label}
+            />
+          ))}
 
         </div>
       )}
@@ -413,8 +383,8 @@ function DashboardHome({ memberView = false }) {
         {/* Recent Tasks */}
         <div
           className="
-            bg-white/5
-            border border-white/10
+            bg-white/[0.06]
+            border border-white/15
 
             rounded-xl
             p-6
@@ -449,8 +419,8 @@ function DashboardHome({ memberView = false }) {
         {/* Recent Projects */}
         <div
           className="
-            bg-white/5
-            border border-white/10
+            bg-white/[0.06]
+            border border-white/15
 
             rounded-xl
             p-6
@@ -471,8 +441,8 @@ function DashboardHome({ memberView = false }) {
               recentProjects.map(project => (
                 <div
                   key={project.id}
-                  className="
-                    flex justify-between
+                    className="
+                      flex justify-between
 
                     bg-white/5
 
@@ -480,7 +450,7 @@ function DashboardHome({ memberView = false }) {
 
                     rounded-lg
 
-                    hover:bg-white/10
+                    hover:bg-white/[0.12]
 
                     transition
                   "
@@ -552,7 +522,7 @@ function DashboardHome({ memberView = false }) {
                       </span>
 
                       {isSubtaskOverdue(subtask) && (
-                        <Badge variant="danger">
+                        <Badge variant="neutral" className="border-white/20 bg-white/10 text-white">
                           Overdue
                         </Badge>
                       )}
@@ -609,7 +579,7 @@ function DashboardHome({ memberView = false }) {
                       </span>
 
                       {isSubtaskOverdue(subtask) && (
-                        <Badge variant="danger">
+                        <Badge variant="neutral" className="border-white/20 bg-white/10 text-white">
                           Overdue
                         </Badge>
                       )}

@@ -260,12 +260,13 @@ function TaskCard({
   return (
     <Card
       hover={true}
-      className="group p-4"
+      className="group relative overflow-hidden p-4"
       data-subtasks-assigned={subtasksAssignedToCurrentUser}
     >
+      <div className="pointer-events-none absolute inset-0 bg-gradient-primary opacity-0 transition-opacity duration-300 group-hover:opacity-[0.07]" />
 
       {/* Top Row */}
-      <div className="flex items-start justify-between gap-3">
+      <div className="relative z-10 flex items-start justify-between gap-3">
 
 
         {/* Left */}
@@ -375,7 +376,7 @@ function TaskCard({
               variant="ghost"
               size="sm"
               onClick={() => setIsExpanded((prev) => !prev)}
-              className="h-8 w-8 p-0 text-textSecondary hover:text-white"
+              className="h-8 w-8 p-0 text-textSecondary hover:bg-white/10 hover:text-white"
               aria-label={isExpanded ? "Collapse subtasks" : "Expand subtasks"}
             >
               <ChevronDown
@@ -401,7 +402,7 @@ function TaskCard({
                   group-hover:opacity-100
                   focus-visible:opacity-100
                   h-8 w-8 p-0
-                  bg-transparent text-red-400 hover:text-red-300 hover:bg-red-500/10
+                  bg-transparent text-red-400 hover:scale-105 hover:text-red-300 hover:bg-red-500/10
                 "
                 aria-label="Delete task"
               >
@@ -417,7 +418,7 @@ function TaskCard({
                   group-hover:opacity-100
                   focus-visible:opacity-100
                   h-8 w-8 p-0
-                  text-blue-300 hover:text-blue-200
+                  text-blue-300 hover:scale-105 hover:bg-white/10 hover:text-blue-200
                 "
                 aria-label="Edit task"
               >
@@ -467,7 +468,7 @@ function TaskCard({
       {/* Subtasks */}
       {normalizedSubtasks.length > 0 && isExpanded && (
 
-        <div className="mt-4 space-y-2">
+        <div className="relative z-10 mt-4 space-y-2">
 
           {normalizedSubtasks.map((subtask, index) => (
 

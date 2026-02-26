@@ -27,6 +27,7 @@ function TeamMemberCard({ member, onDelete }) {
   return (
     <>
       <div className="
+        relative overflow-hidden
         bg-white/5
         border border-white/10
         backdrop-blur-xl
@@ -41,8 +42,10 @@ function TeamMemberCard({ member, onDelete }) {
         flex items-center justify-between
         group
       ">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-primary opacity-0 transition-opacity duration-300 group-hover:opacity-10" />
+
         {/* Left Section */}
-        <div className="flex items-center gap-4">
+        <div className="relative z-10 flex items-center gap-4">
           
           {/* Avatar */}
           <div className="
@@ -89,15 +92,17 @@ function TeamMemberCard({ member, onDelete }) {
           <button
             onClick={handleDeleteClick}
             className="
+              relative z-10
               p-2 rounded-lg
               
               text-textSecondary
-              hover:text-red-400
+              hover:text-red-300
               hover:bg-red-400/10
               
               transition-all duration-300
               
               opacity-0 group-hover:opacity-100
+              hover:scale-105
             "
             title="Remove member"
           >

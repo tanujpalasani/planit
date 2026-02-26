@@ -11,11 +11,11 @@ function KanbanColumn({
   const columnTasks = tasks.filter((task) => task.status === status);
 
   return (
-    <Card className="p-4">
+    <Card className="p-4 hover:border-white/15">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-white">{title}</h3>
 
-        <Badge variant="neutral" className="bg-white/10 text-textSecondary">
+        <Badge variant="neutral" className="bg-white/10 text-textSecondary transition-colors duration-200 hover:bg-white/15">
           {columnTasks.length}
         </Badge>
       </div>
@@ -27,8 +27,8 @@ function KanbanColumn({
           </div>
         ) : (
           columnTasks.map(task => (
-            <div key={task.id}>
-              <div className="text-xs text-textSecondary mb-1">
+            <div key={task.id} className="group/kanban">
+              <div className="mb-1 text-xs text-textSecondary transition-colors duration-200 group-hover/kanban:text-white/80">
                 {task.projectName}
               </div>
 

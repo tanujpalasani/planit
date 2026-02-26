@@ -1,4 +1,6 @@
 const User = require("../models/User");
+const Project = require("../models/Project");
+const Task = require("../models/Task");
 const generateToken = require("../utils/generateToken");
 
 const buildSafeUser = (user) => ({
@@ -97,26 +99,61 @@ const getMe = async (req, res, next) => {
 
 const updateMe = async (req, res, next) => {
   try {
-    const { name, email } = req.body;
-    const normalizedName = String(name || "").trim();
-    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const { name, email, currentPassword, newPassword } = req.body || {};
+    const hasName = typeof name === "string";
+    const hasEmail = typeof email === "string";
+    const hasCurrentPassword = typeof currentPassword === "string" && currentPassword.length > 0;
+    const hasNewPassword = typeof newPassword === "string" && newPassword.length > 0;
 
-    if (!normalizedName || !normalizedEmail) {
-      return res.status(400).json({ message: "Name and email are required" });
+    if (!hasName && !hasEmail && !hasCurrentPassword && !hasNewPassword) {
+      return res.status(400).json({ message: "No profile updates provided" });
+    }
+    if (!hasCurrentPassword && hasNewPassword) {
+      return res.status(400).json({ message: "Current password is required to set a new password" });
+    }
+    if (hasCurrentPassword && !hasNewPassword) {
+      return res.status(400).json({ message: "New password is required" });
+    }
+    if (hasNewPassword && newPassword.length < 6) {
+      return res.status(400).json({ message: "New password must be at least 6 characters" });
     }
 
-    const user = await User.findById(req.user.userId);
+    const user = await User.findById(req.user.userId).select("+password");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const existingEmailOwner = await User.findOne({ email: normalizedEmail, _id: { $ne: user._id } }).select("_id");
-    if (existingEmailOwner) {
-      return res.status(409).json({ message: "Email already registered" });
+    if (hasName) {
+      const normalizedName = String(name || "").trim();
+      if (!normalizedName) {
+        return res.status(400).json({ message: "Name cannot be empty" });
+      }
+      user.name = normalizedName;
     }
 
-    user.name = normalizedName;
-    user.email = normalizedEmail;
+    if (hasEmail) {
+      const normalizedEmail = String(email || "").trim().toLowerCase();
+      if (!normalizedEmail) {
+        return res.status(400).json({ message: "Email cannot be empty" });
+      }
+
+      const existingEmailOwner = await User.findOne({ email: normalizedEmail, _id: { $ne: user._id } }).select("_id");
+      if (existingEmailOwner) {
+        return res.status(409).json({ message: "Email already registered" });
+      }
+
+      user.email = normalizedEmail;
+    }
+
+    if (hasCurrentPassword && hasNewPassword) {
+      const isCurrentPasswordValid = await user.comparePassword(currentPassword);
+      if (!isCurrentPasswordValid) {
+        return res.status(401).json({ message: "Current password is incorrect" });
+      }
+
+      user.password = newPassword;
+    }
+
     await user.save();
 
     return res.status(200).json({
@@ -128,9 +165,52 @@ const updateMe = async (req, res, next) => {
   }
 };
 
+const deleteMe = async (req, res, next) => {
+  try {
+    const { currentPassword } = req.body || {};
+
+    if (typeof currentPassword !== "string" || !currentPassword) {
+      return res.status(400).json({ message: "Current password is required" });
+    }
+
+    const user = await User.findById(req.user.userId).select("+password");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.role !== "Admin") {
+      return res.status(403).json({ message: "Only admin account deletion is supported here" });
+    }
+
+    const isPasswordValid = await user.comparePassword(currentPassword);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Current password is incorrect" });
+    }
+
+    const session = await User.startSession();
+    try {
+      await session.withTransaction(async () => {
+        await Task.deleteMany({ adminId: user._id }, { session });
+        await Project.deleteMany({ adminId: user._id }, { session });
+        await User.deleteMany({ adminId: user._id, role: "Member" }, { session });
+        await User.deleteOne({ _id: user._id }, { session });
+      });
+    } finally {
+      await session.endSession();
+    }
+
+    return res.status(200).json({
+      message: "Admin account and workspace deleted permanently",
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 module.exports = {
   registerAdmin,
   login,
   getMe,
   updateMe,
+  deleteMe,
 };

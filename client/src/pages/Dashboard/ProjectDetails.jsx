@@ -7,6 +7,8 @@ import { Button } from "../../components/ui";
 
 import TaskCard from "../../components/dashboard/task/TaskCard";
 import CreateTaskModal from "../../components/dashboard/task/CreateTaskModal";
+import EditProjectModal from "../../components/dashboard/project/EditProjectModal";
+import ProjectTimelineCalendar from "../../components/dashboard/project/ProjectTimelineCalendar";
 
 function ProjectDetails() {
   const toIdKey = (value) => String(value ?? "");
@@ -15,8 +17,10 @@ function ProjectDetails() {
 
   const {
     projects,
+    teamMembers,
     tasks,
     addTask,
+    updateProject,
     updateTaskStatus,
     deleteTask,
     user
@@ -42,6 +46,15 @@ function ProjectDetails() {
 
   const [isModalOpen, setIsModalOpen] =
     useState(false);
+  const [isManageMembersOpen, setIsManageMembersOpen] = useState(false);
+  const memberIdSet = new Set(
+    (Array.isArray(project?.memberIds) ? project.memberIds : []).map((memberId) => toIdKey(memberId))
+  );
+  const allocatedMembers = teamMembers.filter(
+    (member) =>
+      member.role === "Member" &&
+      memberIdSet.has(toIdKey(member.id))
+  );
 
 
   /* ---------- Create Task ---------- */
@@ -77,6 +90,24 @@ function ProjectDetails() {
 
   const handleDeleteTask = async (taskId) => {
     return deleteTask(taskId);
+  };
+  const handleUpdateProjectMembers = async (projectToUpdateId, data) => {
+    return runAsync(
+      async () => {
+        const updatedProject = await updateProject(projectToUpdateId, {
+          name: data.name,
+          description: data.description,
+          memberIds: data.memberIds,
+        });
+
+        if (!updatedProject) {
+          throw new Error("Failed to update project");
+        }
+
+        return updatedProject;
+      },
+      { successMessage: "Project updated successfully" },
+    );
   };
 
 
@@ -137,9 +168,60 @@ function ProjectDetails() {
 
       </div>
 
+      {/* Allocated Team */}
+      <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-white">
+            Allocated Team
+          </h2>
+
+          {isAdmin && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => setIsManageMembersOpen(true)}
+            >
+              Add Members
+            </Button>
+          )}
+        </div>
+
+        {allocatedMembers.length === 0 ? (
+          <p className="text-sm text-textSecondary">
+            No members allocated to this project yet.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {allocatedMembers.map((member) => (
+              <div
+                key={member.id}
+                className="flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5"
+              >
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-primary text-[10px] font-semibold text-white">
+                  {member.name.charAt(0).toUpperCase()}
+                </span>
+                <span className="text-xs text-white">
+                  {member.name}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <ProjectTimelineCalendar tasks={projectTasks} />
+
 
 
       {/* Task List */}
+      <div className="space-y-1">
+        <h2 className="text-lg font-semibold text-white">
+          Project Tasks
+        </h2>
+        <p className="text-sm text-textSecondary">
+          Tasks created under this project
+        </p>
+      </div>
 
       <div className="space-y-4">
 
@@ -178,6 +260,17 @@ function ProjectDetails() {
             setIsModalOpen(false)
           }
           onCreate={handleCreateTask}
+          defaultProjectId={pid}
+        />
+      )}
+
+      {isAdmin && (
+        <EditProjectModal
+          key={project.id}
+          isOpen={isManageMembersOpen}
+          onClose={() => setIsManageMembersOpen(false)}
+          project={project}
+          onUpdate={handleUpdateProjectMembers}
         />
       )}
 

@@ -1,5 +1,4 @@
 import { useLocation } from "react-router-dom";
-import { Search } from "lucide-react";
 import { useAppContext } from "../../../context/useAppContext";
 
 function Topbar() {
@@ -24,6 +23,9 @@ function Topbar() {
     if (location.pathname.startsWith("/member/tasks"))
       return "My Tasks";
 
+    if (location.pathname.startsWith("/admin/calendar") || location.pathname.startsWith("/member/calendar"))
+      return "Calendar";
+
     if (location.pathname.startsWith("/admin/profile") || location.pathname.startsWith("/member/profile"))
       return "Profile";
 
@@ -43,56 +45,25 @@ function Topbar() {
 
         px-6
 
+        sticky top-0 z-30
+
         bg-primary/80
         backdrop-blur-xl
 
         border-b border-white/10
+        relative
+        overflow-hidden
       "
     >
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[1px] bg-gradient-primary opacity-70" />
 
       {/* Left section */}
-      <div className="flex items-center gap-6">
+      <div className="flex items-center">
 
         {/* Page title */}
-        <h1 className="text-lg font-semibold">
+        <h1 className="text-lg font-semibold bg-gradient-primary bg-clip-text text-transparent">
           {getTitle()}
         </h1>
-
-
-        {/* Search */}
-        <div
-          className="
-            hidden md:flex
-
-            items-center gap-2
-
-            px-3 py-1.5
-
-            bg-white/5
-            border border-white/10
-
-            rounded-lg
-
-            text-textSecondary
-          "
-        >
-
-          <Search size={16} />
-
-          <input
-            type="text"
-            placeholder="Search..."
-            className="
-              bg-transparent
-              outline-none
-
-              text-sm
-
-              placeholder:text-textSecondary
-            "
-          />
-
-        </div>
 
       </div>
 
@@ -106,11 +77,13 @@ function Topbar() {
           className="
             flex items-center gap-3
 
-            px-3 py-1.5
+            px-3 py-1.5 pr-4
 
             rounded-lg
 
-            hover:bg-white/5
+            border border-white/10
+            bg-white/5
+            hover:bg-white/10
 
             cursor-pointer
 

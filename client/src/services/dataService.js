@@ -119,6 +119,11 @@ export const updateCurrentUserProfile = async (payload) => {
   return normalizeUser(data?.user);
 };
 
+export const deleteCurrentAccount = async (payload) => {
+  await apiClient.delete("/auth/me", { data: payload });
+  return true;
+};
+
 export const getTeamMembers = async () => {
   const { data } = await apiClient.get("/users");
   const users = Array.isArray(data?.users) ? data.users : [];

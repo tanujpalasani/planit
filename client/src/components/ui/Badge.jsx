@@ -12,7 +12,7 @@ function Badge({ variant = "neutral", children, className, ...rest }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium leading-none",
+        "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium leading-none transition-colors duration-200",
         variantClasses[variant] || variantClasses.neutral,
         className,
       )}

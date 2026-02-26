@@ -34,7 +34,7 @@ function Toast({ toasts, closingIds, onClose }) {
             <button
               type="button"
               onClick={() => onClose(toast.id)}
-              className="rounded-md p-1 text-white/70 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70"
+              className="rounded-md p-1 text-white/70 transition-all duration-200 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
               aria-label="Close notification"
             >
               <X size={14} />

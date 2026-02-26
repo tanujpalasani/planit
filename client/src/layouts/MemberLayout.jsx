@@ -15,20 +15,21 @@ function MemberLayout() {
             flex-1
             p-6 md:p-8 lg:p-10
 
-            bg-gradient-to-br
-            from-primary
-            via-primary
-            to-secondary
+            bg-primary
 
             relative
+            isolate
             overflow-x-hidden
           "
         >
           <div className="absolute inset-0 -z-10 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-primary opacity-[0.06]" />
+
             <div className="
               absolute top-[10%] left-[20%]
               w-[400px] h-[400px]
-              bg-purple-600/10
+              bg-gradient-primary
+              opacity-20
               blur-[140px]
               rounded-full
             " />
@@ -36,7 +37,8 @@ function MemberLayout() {
             <div className="
               absolute bottom-[10%] right-[20%]
               w-[400px] h-[400px]
-              bg-pink-600/10
+              bg-gradient-primary
+              opacity-20
               blur-[140px]
               rounded-full
             " />

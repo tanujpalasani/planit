@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { FolderKanban, Users, CheckCircle2, Trash2 } from "lucide-react";
+import { FolderKanban, Users, CheckCircle2, Trash2, Edit } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../../../context/useAppContext";
 import { useToast } from "../../../hooks/useToast";
 import { Card, Button, Badge, Modal } from "../../ui";
 
-function ProjectCard({ project, onClick }) {
+function ProjectCard({ project, onClick, onEdit }) {
   const navigate = useNavigate();
   const { deleteProject, tasks, user } = useAppContext();
   const { addToast } = useToast();
@@ -32,6 +32,10 @@ function ProjectCard({ project, onClick }) {
     event.stopPropagation();
     setIsConfirmOpen(true);
   };
+  const handleEditProject = (event) => {
+    event.stopPropagation();
+    onEdit?.(project);
+  };
 
   const handleConfirmDelete = async () => {
     const deleted = await deleteProject(project.id);
@@ -49,9 +53,10 @@ function ProjectCard({ project, onClick }) {
         className="
           relative
           p-6
-          hover:scale-[1.03]
+          hover:scale-[1.02]
           cursor-pointer
           group
+          overflow-hidden
         "
       >
         {/* Gradient Glow Background */}
@@ -60,8 +65,8 @@ function ProjectCard({ project, onClick }) {
             absolute inset-0
             opacity-10 blur-xl
             rounded-xl
-            group-hover:opacity-20
-            transition-all
+            group-hover:opacity-25
+            transition-all duration-300
             bg-gradient-to-r ${project.color || "from-transparent to-transparent"}
           `}
         />
@@ -74,6 +79,7 @@ function ProjectCard({ project, onClick }) {
             <div
               className={`
                 p-2 rounded-lg
+                transition-transform duration-300 group-hover:scale-105
                 bg-gradient-to-r ${project.color}
               `}
             >
@@ -89,6 +95,25 @@ function ProjectCard({ project, onClick }) {
                 {project.status}
               </Badge>
 
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleEditProject}
+                  className="
+                    h-8 w-8 p-0
+                    opacity-0
+                    group-hover:opacity-100
+                    focus-visible:opacity-100
+                    hover:scale-105
+                    transition-all duration-200
+                  "
+                  aria-label="Edit project"
+                >
+                  <Edit size={16} />
+                </Button>
+              )}
+
               {/* Delete */}
               {isAdmin && (
                 <Button
@@ -100,7 +125,8 @@ function ProjectCard({ project, onClick }) {
                     opacity-0
                     group-hover:opacity-100
                     focus-visible:opacity-100
-                    transition
+                    hover:scale-105
+                    transition-all duration-200
                   "
                   aria-label="Delete project"
                 >
@@ -116,8 +142,9 @@ function ProjectCard({ project, onClick }) {
               className="
               font-semibold
               text-lg
+              text-white/95
               group-hover:text-white
-              transition
+              transition-colors duration-200
             "
             >
               {project.name}
