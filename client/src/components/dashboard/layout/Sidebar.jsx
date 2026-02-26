@@ -66,6 +66,11 @@ function Sidebar({ role }) {
           icon: CheckSquare,
         },
         {
+          name: "Projects",
+          path: `${basePath}/projects`,
+          icon: FolderKanban,
+        },
+        {
           name: "Calendar",
           path: `${basePath}/calendar`,
           icon: CalendarDays,

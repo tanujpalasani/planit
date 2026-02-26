@@ -50,11 +50,18 @@ function ProjectDetails() {
   const memberIdSet = new Set(
     (Array.isArray(project?.memberIds) ? project.memberIds : []).map((memberId) => toIdKey(memberId))
   );
-  const allocatedMembers = teamMembers.filter(
-    (member) =>
-      member.role === "Member" &&
-      memberIdSet.has(toIdKey(member.id))
-  );
+  const allocatedMembers = Array.isArray(project?.members) && project.members.length > 0
+    ? project.members
+      .filter((member) => member && toIdKey(member.id))
+      .map((member) => ({
+        id: member.id,
+        name: member.name || "Member",
+      }))
+    : teamMembers.filter(
+      (member) =>
+        member.role === "Member" &&
+        memberIdSet.has(toIdKey(member.id))
+    );
 
 
   /* ---------- Create Task ---------- */

@@ -129,7 +129,7 @@ function ProjectTimelineCalendar({ tasks }) {
     : [];
 
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-4 md:p-5">
+    <div className="rounded-xl border border-white/10 bg-white/5 p-4">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-white">
@@ -181,10 +181,10 @@ function ProjectTimelineCalendar({ tasks }) {
         ))}
       </div>
 
-      <div className="mt-1 grid grid-cols-7 gap-2">
+      <div className="mt-1 grid grid-cols-7 gap-1.5">
         {calendarCells.map((dateKey, index) => {
           if (!dateKey) {
-            return <div key={`empty-${index}`} className="h-24 rounded-lg bg-transparent" />;
+            return <div key={`empty-${index}`} className="h-20 rounded-lg bg-transparent" />;
           }
 
           const dateEvents = eventsByDate.get(dateKey) || [];
@@ -192,16 +192,16 @@ function ProjectTimelineCalendar({ tasks }) {
 
           return (
             <button
-              key={dateKey}
-              type="button"
-              onClick={() => setSelectedDateKey(dateKey)}
-              className={`
-                h-24 rounded-lg border p-2 text-left transition-all duration-200
-                ${isSelected
-                  ? "border-transparent bg-gradient-primary text-white shadow-glow"
-                  : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"}
-              `}
-            >
+                key={dateKey}
+                type="button"
+                onClick={() => setSelectedDateKey(dateKey)}
+                className={`
+                  h-20 rounded-lg border p-1.5 text-left transition-all duration-200
+                  ${isSelected
+                    ? "border-transparent bg-gradient-primary text-white shadow-glow"
+                    : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"}
+                `}
+              >
               <div className="flex items-start justify-between">
                 <span className={`text-xs font-medium ${isSelected ? "text-white" : "text-textSecondary"}`}>
                   {Number(dateKey.slice(-2))}
@@ -211,7 +211,7 @@ function ProjectTimelineCalendar({ tasks }) {
                 )}
               </div>
 
-              <div className="mt-2 space-y-1">
+                <div className="mt-1.5 space-y-1">
                 {dateEvents.slice(0, 2).map((event) => (
                   <p
                     key={event.id}

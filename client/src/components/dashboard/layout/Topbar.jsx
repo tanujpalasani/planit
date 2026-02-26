@@ -17,6 +17,9 @@ function Topbar() {
     if (location.pathname.startsWith("/admin/projects"))
       return "Projects";
 
+    if (location.pathname.startsWith("/member/projects"))
+      return "Projects";
+
     if (location.pathname.startsWith("/admin/tasks"))
       return "Tasks";
 

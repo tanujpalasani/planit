@@ -18,7 +18,9 @@ const getProjects = async (req, res, next) => {
       query.memberIds = req.user.userId;
     }
 
-    const projects = await Project.find(query).sort({ createdAt: -1 });
+    const projects = await Project.find(query)
+      .populate("memberIds", "name email role")
+      .sort({ createdAt: -1 });
     return res.status(200).json({ projects });
   } catch (error) {
     return next(error);

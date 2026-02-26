@@ -73,6 +73,8 @@ function AppRouter() {
         <Route element={<RoleRoute role="Member" />}>
           <Route path="/member" element={<MemberLayout />}>
             <Route index element={<DashboardHome memberView={true} />} />
+            <Route path="projects" element={<Projects />} />
+            <Route path="projects/:projectId" element={<ProjectDetails />} />
             <Route path="tasks" element={<Tasks assignedOnly={true} />} />
             <Route path="calendar" element={<Calendar />} />
             <Route path="profile" element={<Profile />} />

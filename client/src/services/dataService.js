@@ -46,12 +46,21 @@ const normalizeProject = (project) => {
   if (!normalized) {
     return null;
   }
+  const rawMembers = Array.isArray(normalized.memberIds) ? normalized.memberIds : [];
+  const normalizedMembers = rawMembers
+    .filter((member) => member && typeof member === "object")
+    .map((member) => ({
+      id: member.id ?? member._id ?? null,
+      name: member.name ?? "",
+      email: member.email ?? "",
+      role: member.role ?? "Member",
+    }))
+    .filter((member) => member.id);
 
   return {
     ...normalized,
-    memberIds: Array.isArray(normalized.memberIds)
-      ? normalized.memberIds.map((memberId) => (typeof memberId === "object" ? (memberId._id ?? memberId.id) : memberId))
-      : [],
+    memberIds: rawMembers.map((memberId) => (typeof memberId === "object" ? (memberId._id ?? memberId.id) : memberId)),
+    members: normalizedMembers,
   };
 };
 

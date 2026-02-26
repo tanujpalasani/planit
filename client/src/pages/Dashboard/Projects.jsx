@@ -44,7 +44,7 @@ function Projects() {
 
   /* ---------------- Navigate to Project ---------------- */
   const handleOpenProject = (project) => {
-    navigate(`/admin/projects/${project.id}`);
+    navigate(isAdmin ? `/admin/projects/${project.id}` : `/member/projects/${project.id}`);
   };
   const handleEditProject = (project) => {
     setEditingProject(project);

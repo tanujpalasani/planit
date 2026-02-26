@@ -155,6 +155,19 @@ const sanitizeProjects = (projects) => {
         memberIds: Array.isArray(project.memberIds)
           ? project.memberIds.map((memberId) => (typeof memberId === "object" ? (memberId._id ?? memberId.id) : memberId))
           : [],
+        members: Array.isArray(project.members)
+          ? project.members
+          : Array.isArray(project.memberIds)
+            ? project.memberIds
+              .filter((member) => member && typeof member === "object")
+              .map((member) => ({
+                id: member.id ?? member._id,
+                name: member.name ?? "",
+                email: member.email ?? "",
+                role: member.role ?? TEAM_MEMBER_ROLES.MEMBER,
+              }))
+              .filter((member) => member.id)
+            : [],
       };
     })
     .filter(Boolean);
