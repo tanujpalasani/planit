@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAppContext } from "../../context/useAppContext";
 import useAsyncAction from "../../hooks/useAsyncAction";
 
@@ -9,6 +10,7 @@ import TaskFilters from "../../components/dashboard/task/TaskFilters";
 import KanbanColumn from "../../components/dashboard/task/KanbanColumn";
 
 function Tasks({ assignedOnly = false }) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const toIdKey = (value) => String(value ?? "");
   const [isModalOpen, setIsModalOpen] =
     useState(false);
@@ -32,6 +34,8 @@ function Tasks({ assignedOnly = false }) {
   } = useAppContext();
   const { runAsync } = useAsyncAction();
   const isAdmin = user?.role === "Admin";
+  const shouldOpenCreate = isAdmin && searchParams.get("create") === "1";
+  const isCreateModalOpen = isModalOpen || shouldOpenCreate;
 
   /* ---------- Create Task ---------- */
 
@@ -218,10 +222,15 @@ function Tasks({ assignedOnly = false }) {
 
       {isAdmin && (
         <CreateTaskModal
-          isOpen={isModalOpen}
-          onClose={() =>
-            setIsModalOpen(false)
-          }
+          isOpen={isCreateModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            if (shouldOpenCreate) {
+              const next = new URLSearchParams(searchParams);
+              next.delete("create");
+              setSearchParams(next, { replace: true });
+            }
+          }}
           onCreate={handleCreateTask}
         />
       )}

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppContext } from "../../context/useAppContext";
 import useAsyncAction from "../../hooks/useAsyncAction";
 import { Button } from "../../components/ui";
@@ -11,14 +11,17 @@ import EditProjectModal from "../../components/dashboard/project/EditProjectModa
 
 function Projects() {
 
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { projects, addProject, updateProject, user } = useAppContext();
   const { runAsync } = useAsyncAction();
   const isAdmin = user?.role === "Admin";
+  const shouldOpenCreate = searchParams.get("create") === "1";
 
   /* ---------------- Modal State ---------------- */
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
+  const isCreateModalOpen = isModalOpen || (isAdmin && shouldOpenCreate);
 
 
   /* ---------------- Create Project from Context ---------------- */
@@ -135,8 +138,15 @@ function Projects() {
       {/* Create Project Modal */}
       {isAdmin && (
         <CreateProjectModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          isOpen={isCreateModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            if (shouldOpenCreate) {
+              const next = new URLSearchParams(searchParams);
+              next.delete("create");
+              setSearchParams(next, { replace: true });
+            }
+          }}
           onCreate={handleCreateProject}
         />
       )}

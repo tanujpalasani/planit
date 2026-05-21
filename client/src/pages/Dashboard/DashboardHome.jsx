@@ -7,7 +7,8 @@ import {
   CalendarCheck2,
   AlertTriangle,
   Activity,
-  Gauge
+  Gauge,
+  CircleDot
 } from "lucide-react";
 
 import TaskCard from "../../components/dashboard/task/TaskCard";
@@ -115,39 +116,32 @@ function DashboardHome({ memberView = false }) {
 
       return isPastDate(task.dueDate);
     }).length;
+    const dueThisWeek = scopedTasks.filter((task) => {
+      if (!task?.dueDate || isDoneStatus(task.status)) {
+        return false;
+      }
+      return isWithinNextDays(task.dueDate, 7);
+    }).length;
+    const unassignedTasks = scopedTasks.filter((task) => !task?.assigneeId).length;
+    const statusCounts = {
+      todo: scopedTasks.filter((task) => String(task.status || "").trim() === "Todo").length,
+      inProgress: scopedTasks.filter((task) => String(task.status || "").trim() === "In Progress").length,
+      completed: completedTasks,
+    };
 
-    const projectTaskCounts = scopedProjects.map((project) => {
-      const count = scopedTasks.filter(
-        (task) => String(task.projectId) === String(project.id)
-      ).length;
-
-      return { project, count };
-    });
-
-    const mostActiveProject = projectTaskCounts.reduce(
-      (currentMax, currentProject) =>
-        currentProject.count > currentMax.count
-          ? currentProject
-          : currentMax,
-      { project: null, count: 0 }
-    );
-
-    let productivityLabel = "Needs Attention";
-
-    if (completionRate > 75) {
-      productivityLabel = "High Productivity";
-    }
+    const atRiskCount = overdueTasks + unassignedTasks;
 
     return {
+      totalTasks,
       completionRate,
       tasksCompletedThisWeek,
       overdueTasks,
-      mostActiveProjectName: mostActiveProject.project?.name || "N/A",
-      mostActiveProjectCount: mostActiveProject.count,
-      productivityLabel,
-      teamSize: teamMembers.length
+      dueThisWeek,
+      unassignedTasks,
+      atRiskCount,
+      statusCounts,
     };
-  }, [scopedTasks, scopedProjects, teamMembers]);
+  }, [scopedTasks]);
 
   /* ---------------- Recent Tasks from Context ---------------- */
 
@@ -234,6 +228,51 @@ function DashboardHome({ memberView = false }) {
         .sort((a, b) => sortByDateAsc(a?.dueDate, b?.dueDate)),
     [allSubtasks, user]
   );
+  const adminUpcomingItems = useMemo(() => {
+    if (isMemberView) {
+      return [];
+    }
+
+    const upcomingTasks = scopedTasks
+      .filter((task) => task?.dueDate && String(task.status || "").trim() !== "Completed")
+      .filter((task) => isWithinNextDays(task.dueDate, 7))
+      .map((task) => ({
+        id: `task-${task.id}`,
+        title: task.title,
+        parentLabel: "Task",
+        dueDate: task.dueDate,
+      }));
+
+    const upcomingSubtaskItems = allSubtasks
+      .filter((subtask) => subtask?.dueDate && !subtask?.completed)
+      .filter((subtask) => isWithinNextDays(subtask.dueDate, 7))
+      .map((subtask) => ({
+        id: `subtask-${subtask.parentTaskId}-${subtask.id}`,
+        title: subtask.title,
+        parentLabel: `Subtask in ${subtask.parentTaskTitle}`,
+        dueDate: subtask.dueDate,
+      }));
+
+    return [...upcomingTasks, ...upcomingSubtaskItems]
+      .sort((a, b) => sortByDateAsc(a?.dueDate, b?.dueDate))
+      .slice(0, 6);
+  }, [allSubtasks, isMemberView, scopedTasks]);
+  const adminAtRiskItems = useMemo(() => {
+    if (isMemberView) {
+      return [];
+    }
+
+    return scopedTasks
+      .filter((task) => {
+        const status = String(task.status || "").trim();
+        if (status === "Completed") {
+          return false;
+        }
+
+        return isPastDate(task.dueDate) || !task.assigneeId;
+      })
+      .slice(0, 6);
+  }, [isMemberView, scopedTasks]);
   const formatDueDate = (dueDateValue) => {
     if (!dueDateValue) {
       return "No due date";
@@ -275,12 +314,12 @@ function DashboardHome({ memberView = false }) {
   ];
   const adminStatItems = [
     {
-      label: "Completion Rate",
-      value: `${analytics.completionRate}%`,
+      label: "Total Tasks",
+      value: analytics.totalTasks,
       icon: Target,
     },
     {
-      label: "Tasks Completed This Week",
+      label: "Completed",
       value: analytics.tasksCompletedThisWeek,
       icon: CalendarCheck2,
     },
@@ -290,13 +329,8 @@ function DashboardHome({ memberView = false }) {
       icon: AlertTriangle,
     },
     {
-      label: `Most Active Project (${analytics.mostActiveProjectCount} tasks)`,
-      value: analytics.mostActiveProjectName,
-      icon: Activity,
-    },
-    {
-      label: `Productivity (${analytics.teamSize} team members)`,
-      value: analytics.productivityLabel,
+      label: "Due This Week",
+      value: analytics.dueThisWeek,
       icon: Gauge,
     },
   ];
@@ -349,14 +383,15 @@ function DashboardHome({ memberView = false }) {
 
         </div>
       ) : (
-        <div
-          className="
-            grid grid-cols-1
-            sm:grid-cols-2
-            xl:grid-cols-5
-            gap-6
-          "
-        >
+        <div className="space-y-6">
+          <div
+            className="
+              grid grid-cols-1
+              sm:grid-cols-2
+              xl:grid-cols-4
+              gap-6
+            "
+          >
           {adminStatItems.map((item) => (
             <StatCard
               key={item.label}
@@ -365,7 +400,121 @@ function DashboardHome({ memberView = false }) {
               label={item.label}
             />
           ))}
+          </div>
 
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <Card className="space-y-4">
+              <h2 className="font-semibold text-white">
+                Status Breakdown
+              </h2>
+
+              <div className="space-y-3">
+                <div>
+                  <div className="mb-1 flex items-center justify-between text-sm">
+                    <span className="text-textSecondary">To Do</span>
+                    <span className="text-white">{analytics.statusCounts.todo}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-white/10">
+                    <div
+                      className="h-full rounded-full bg-gradient-primary"
+                      style={{ width: `${analytics.totalTasks ? Math.round((analytics.statusCounts.todo / analytics.totalTasks) * 100) : 0}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-1 flex items-center justify-between text-sm">
+                    <span className="text-textSecondary">In Progress</span>
+                    <span className="text-white">{analytics.statusCounts.inProgress}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-white/10">
+                    <div
+                      className="h-full rounded-full bg-gradient-primary"
+                      style={{ width: `${analytics.totalTasks ? Math.round((analytics.statusCounts.inProgress / analytics.totalTasks) * 100) : 0}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-1 flex items-center justify-between text-sm">
+                    <span className="text-textSecondary">Completed</span>
+                    <span className="text-white">{analytics.statusCounts.completed}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-white/10">
+                    <div
+                      className="h-full rounded-full bg-gradient-primary"
+                      style={{ width: `${analytics.totalTasks ? Math.round((analytics.statusCounts.completed / analytics.totalTasks) * 100) : 0}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="space-y-4">
+              <h2 className="font-semibold text-white">
+                Upcoming Deadlines
+              </h2>
+
+              <div className="space-y-2">
+                {adminUpcomingItems.length === 0 ? (
+                  <p className="text-sm text-textSecondary">
+                    No deadlines in the next 7 days.
+                  </p>
+                ) : (
+                  adminUpcomingItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm text-white">{item.title}</p>
+                        <p className="truncate text-xs text-textSecondary">{item.parentLabel}</p>
+                      </div>
+                      <span className="text-xs text-textSecondary whitespace-nowrap">
+                        {formatDueDate(item.dueDate)}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+
+            <Card className="space-y-4">
+              <h2 className="font-semibold text-white">
+                At Risk
+              </h2>
+
+              <p className="text-sm text-textSecondary">
+                Overdue or unassigned tasks: <span className="text-white font-medium">{analytics.atRiskCount}</span>
+              </p>
+
+              <div className="space-y-2">
+                {adminAtRiskItems.length === 0 ? (
+                  <p className="text-sm text-textSecondary">
+                    No at-risk tasks.
+                  </p>
+                ) : (
+                  adminAtRiskItems.map((task) => (
+                    <div
+                      key={task.id}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm text-white">{task.title}</p>
+                        <p className="text-xs text-textSecondary">
+                          {task.assigneeId ? "Assigned" : "Unassigned"}
+                        </p>
+                      </div>
+                      <Badge variant="neutral" className="border-white/20 bg-white/10 text-white gap-1">
+                        <CircleDot size={10} />
+                        {task.dueDate && isPastDate(task.dueDate) ? "Overdue" : "Unassigned"}
+                      </Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+          </div>
         </div>
       )}
 

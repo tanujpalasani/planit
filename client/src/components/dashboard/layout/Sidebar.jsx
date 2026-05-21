@@ -110,6 +110,7 @@ function Sidebar({ role }) {
       <div className="pointer-events-none absolute inset-y-0 right-0 w-[1px] bg-gradient-primary opacity-60" />
       <div className="pointer-events-none absolute -top-24 -left-20 h-60 w-60 rounded-full bg-gradient-primary opacity-20 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-24 -right-16 h-52 w-52 rounded-full bg-gradient-primary opacity-20 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-24 bg-gradient-primary opacity-10 blur-2xl" />
 
       {/* Logo */}
       <div
@@ -128,7 +129,7 @@ function Sidebar({ role }) {
           src={Logo}
           alt="PlanIt Logo"
           className="
-            w-44
+            w-60
             object-contain
           "
         />
@@ -155,6 +156,9 @@ function Sidebar({ role }) {
           space-y-1
         "
       >
+        <p className="px-2 pb-2 text-[11px] uppercase tracking-[0.14em] text-textSecondary">
+          Navigation
+        </p>
 
         {navItems.map((item) => {
 
@@ -181,15 +185,16 @@ function Sidebar({ role }) {
 
                 ${
                   isActive
-                    ? "text-white bg-white/10 border border-white/15 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] [&>span:first-child]:opacity-15"
-                    : "text-textSecondary hover:text-white hover:bg-white/5"
+                    ? "text-white bg-white/10 border border-white/15 shadow-[0_10px_28px_rgba(0,0,0,0.25)] [&>span:first-child]:opacity-100 [&>span:nth-child(2)]:opacity-20 [&>span:nth-child(3)]:bg-white/20"
+                    : "text-textSecondary hover:text-white hover:bg-white/5 hover:border hover:border-white/10"
                 }
                 `
               }
             >
+              <span className="pointer-events-none absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r bg-gradient-primary opacity-0 transition-opacity duration-200" />
               <span className="pointer-events-none absolute inset-0 rounded-lg bg-gradient-primary opacity-0 transition-opacity duration-200" />
 
-              <span className="relative z-10 flex h-7 w-7 items-center justify-center rounded-md bg-white/10">
+              <span className="relative z-10 flex h-7 w-7 items-center justify-center rounded-md bg-white/10 transition-colors duration-200">
                 <Icon size={16} />
               </span>
 
@@ -229,7 +234,7 @@ function Sidebar({ role }) {
             text-textSecondary
 
             hover:text-white
-            hover:bg-white/5
+            hover:bg-white/5 hover:border hover:border-white/10
 
             transition-all duration-200
           "

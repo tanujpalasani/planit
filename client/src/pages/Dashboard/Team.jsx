@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { useAppContext } from "../../context/useAppContext";
 import useAsyncAction from "../../hooks/useAsyncAction";
 import TeamMemberCard from "../../components/dashboard/team/TeamMemberCard";
@@ -7,10 +8,13 @@ import AddMemberModal from "../../components/dashboard/team/AddMemberModal";
 import { Button } from "../../components/ui";
 
 function Team() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { teamMembers, addTeamMember, removeTeamMember, user } = useAppContext();
   const { runAsync } = useAsyncAction();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const isAdmin = user?.role === "Admin";
+  const shouldOpenCreate = searchParams.get("create") === "1";
+  const isCreateModalOpen = isModalOpen || (isAdmin && shouldOpenCreate);
 
   const handleOpenModal = () => {
     setIsModalOpen(true);
@@ -104,8 +108,15 @@ function Team() {
 
       {/* Modal */}
       <AddMemberModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
+        isOpen={isCreateModalOpen}
+        onClose={() => {
+          handleCloseModal();
+          if (shouldOpenCreate) {
+            const next = new URLSearchParams(searchParams);
+            next.delete("create");
+            setSearchParams(next, { replace: true });
+          }
+        }}
         onAddMember={handleAddMember}
       />
     </div>
