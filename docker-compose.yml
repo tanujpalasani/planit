@@ -1,0 +1,47 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: planit-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: planit
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - planit-net
+
+  backend:
+    build:
+      context: ./server
+    container_name: planit-backend
+    restart: unless-stopped
+    environment:
+      PORT: 5000
+      NODE_ENV: production
+      JWT_SECRET: change_this_secret
+      MONGO_URI: mongodb://mongo:27017/planit
+      CORS_ORIGIN: http://localhost:5173,http://localhost:4173,http://localhost:3000,http://localhost
+    depends_on:
+      - mongo
+    ports:
+      - "5000:5000"
+    networks:
+      - planit-net
+
+  frontend:
+    build:
+      context: ./client
+    container_name: planit-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - planit-net
+
+volumes:
+  mongo_data:
+
+networks:
+  planit-net:

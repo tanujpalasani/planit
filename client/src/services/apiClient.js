@@ -2,6 +2,9 @@ import axios from "axios";
 
 const TOKEN_KEY = "planit_token";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+  || (import.meta.env.DEV ? "http://localhost:5000/api" : "/api");
+
 export const getStoredToken = () => {
   if (typeof window === "undefined") {
     return null;
@@ -41,7 +44,7 @@ export const setApiToken = (token) => {
 };
 
 const apiClient = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: API_BASE_URL,
 });
 
 apiClient.interceptors.request.use((config) => {
