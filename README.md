@@ -145,8 +145,7 @@ Set these in Render dashboard:
   - `https://<your-render-service>.onrender.com/api/health`
 
 ## Deployment Link
-- Replace with your real deployed URL after deployment:
-  - `https://<your-render-service>.onrender.com`
+- `https://planit-backend-5qgs.onrender.com`
 
 ---
 
@@ -159,11 +158,33 @@ Set these in Render dashboard:
 
 ---
 
-## 6) Submission Checklist (for your evaluation rubric)
+## 6) Frontend Deployment on Vercel (Optional but Recommended)
+
+### Vercel Project Settings
+- Framework Preset: `Vite`
+- Root Directory: `client`
+- Build Command: `npm run build`
+- Output Directory: `dist`
+
+### Environment Variables on Vercel
+- `VITE_API_BASE_URL=https://planit-backend-5qgs.onrender.com/api`
+
+### Important Backend CORS Update
+In Render backend env var `CORS_ORIGIN`, include your Vercel domain too, for example:
+- `https://your-frontend.vercel.app,http://localhost:5173,http://localhost`
+
+### Verify Frontend Deployment
+- Open your Vercel URL and test login/signup flows.
+- Confirm API calls are going to:
+  - `https://planit-backend-5qgs.onrender.com/api`
+
+---
+
+## 7) Submission Checklist (for your evaluation rubric)
 
 - [x] Dockerfile for backend
 - [x] Dockerfile for frontend
 - [x] Containers run via Docker Compose
 - [x] Frontend connected to backend in containerized setup
 - [x] Render deployment instructions + required env configuration
-- [x] README with local run steps, Docker commands, deployment link placeholder, architecture
+- [x] README with local run steps, Docker commands, deployment link, architecture
